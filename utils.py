@@ -63,6 +63,7 @@ s3_client_BRG = boto3.client('s3',
             aws_access_key_id = AWS_ACCESS_KEY_ID,
             aws_secret_access_key = AWS_SECRET_KEY)
 rekognition_client= boto3.client('rekognition',
+                                 region_name='us-east-1',
                                 aws_access_key_id = AWS_ACCESS_KEY_ID,
                                 aws_secret_access_key = AWS_SECRET_KEY)
 
