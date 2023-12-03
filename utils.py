@@ -526,25 +526,6 @@ def pd_read_parquet(_s3_client,bucket,key,columns=None):
 
     """
     Reads a Parquet file from an S3 bucket and returns a pandas DataFrame.
-
-    This function reads a Parquet file stored in an S3 bucket and converts it into a pandas DataFrame.
-    If the `columns` parameter is provided, only the specified columns will be read from the Parquet file.
-
-    Args:
-        _s3_client (boto3.client): A boto3 S3 client instance.
-        bucket (str): The name of the S3 bucket containing the Parquet file.
-        key (str): The key (path) of the Parquet file in the S3 bucket.
-        columns (list, optional): A list of column names to read from the Parquet file. If not provided, all columns will be read.
-
-    Returns:
-        pd.DataFrame: A pandas DataFrame containing the data from the Parquet file, or None if an exception occurs.
-
-    Examples:
-        >>> s3_client = boto3.client('s3')
-        >>> bucket = 'my-bucket'
-        >>> key = 'path/to/parquet_file.parquet'
-        >>> df = pd_read_parquet(s3_client, bucket, key)
-        >>> df.head()
     """
 
 
@@ -557,7 +538,7 @@ def pd_read_parquet(_s3_client,bucket,key,columns=None):
         else:
             return pd.read_parquet(buffer)
     except:
-        pass
+        return pd.DataFrame()
 
 def pd_save_parquet(_s3_client, df, bucket, key, schema=None):
     """

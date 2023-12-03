@@ -145,6 +145,7 @@ def pdf_to_images(pdf_file):
             pix = page.get_pixmap()
             # Store the image as PIL.Image
             images.append(Image.open(io.BytesIO(pix.tobytes("png"))))
+        # pdf_file.seek[0]
         return images
     except:
         st.error("Error: Invalid file format")
@@ -232,64 +233,18 @@ def extract_words_with_rekognition(rekognition_client,
 
     return extracted_words
     
-    # Sort words by their Y position (top) and then X position (left)
-    # words.sort(key=lambda w: (w['Geometry']['BoundingBox']['Top'], w['Geometry']['BoundingBox']['Left']))
-
-    # lines = []
-    # current_line = []
-
-    # for word in words:
-    #     # Calculate the top and left position of the word
-    #     top = word['Geometry']['BoundingBox']['Top']
-    #     left = word['Geometry']['BoundingBox']['Left']
-        
-    #     if not current_line:
-    #         current_line.append(word)
-    #     else:
-    #         # Check if the current word is on the same line as the previous word
-    #         if abs(current_line[-1]['Geometry']['BoundingBox']['Top'] - top) <= tolerance:
-    #             current_line.append(word)
-    #         else:
-    #             lines.append(current_line)
-    #             current_line = [word]
-    
-    # # Add the last line if not empty
-    # if current_line:
-    #     lines.append(current_line)
-
-    # # Now transform the coordinates
-    # line_coords = []
-    # for line in lines:
-    #     # Sort words in the line by their X position (left)
-    #     sorted_line = sorted(line, key=lambda w: w['Geometry']['BoundingBox']['Left'])
-        
-    #     # Extract the coordinates and compute x0, x1, top, bottom
-    #     coords = []
-    #     for w in sorted_line:
-    #         x0 = w['Geometry']['BoundingBox']['Left']
-    #         y0 = w['Geometry']['BoundingBox']['Top']
-    #         x1 = x0 + w['Geometry']['BoundingBox']['Width']
-    #         y1 = y0 + w['Geometry']['BoundingBox']['Height']
-            
-    #         coords.append({
-    #             'text': w['DetectedText'],
-    #             'x0': x0,
-    #             'x1': x1,
-    #             'top': y0,
-    #             'bottom': y1
-    #         })
-        
-    # return sorted(coords, key=lambda word: word['top'])
 
 
 
 
-@st.cache_data()
+# @st.cache_data()
 def extract_words_from_pdf(uploaded_file,
+                           max_words_per_page=1700,
                            counter=None):
 
 
     all_extracted_words = []
+    pages_used_for_extraction = []
     with pdfplumber.open(uploaded_file) as pdf:
         # Initialize the height offset as 0
         height_offset = 0
@@ -297,7 +252,7 @@ def extract_words_from_pdf(uploaded_file,
             try:
                 # Extract words from the current page
                 extracted_words = pdf_page.extract_words()
-                if len(extracted_words)>1700:
+                if len(extracted_words)>max_words_per_page:
                    pass
                 else:
 
@@ -309,6 +264,7 @@ def extract_words_from_pdf(uploaded_file,
 
                   # Append adjusted words to the main list
                   all_extracted_words.extend(extracted_words)
+                  pages_used_for_extraction.append(page_number)
 
                   # Update the height offset by adding the height of the current page
                   height_offset += pdf_page.height
@@ -317,7 +273,7 @@ def extract_words_from_pdf(uploaded_file,
                 
                 pass
 
-    return normalize_extracted_words(all_extracted_words)
+    return normalize_extracted_words(all_extracted_words), pages_used_for_extraction
 
 def group_words_by_line(words, tolerance=3):
     lines = []
@@ -357,23 +313,7 @@ def parse_line_items_in_(gpt_response):
   else:
       keys1 = list(json_data[keys[1]])
       line_items = json_data[keys[1]][keys1[0]]
-  # # matches = re.findall(r'\[ *\{.*?\}.*]', ''.join(gpt_response.splitlines()))
-  # pat = re.compile(r'\{.*?Product.?id".*\}',re.I)
-  # matches = pat.findall(gpt_response)
-  # # try:
-  # line_items = [eval(i) for i in matches if i]
-  # except:
-  # # line_items_df = pd.DataFrame(line_items)
-  #   if len(matches) >0:
-  #   # st.write(matches)
-  #     for match in matches:
 
-  #       try:
-  #         extracted_dict = eval(match)  # Convert string representation of dictionary to an actual dictionary
-  #       except:
-  #         extracted_dict = match
-  #         extracted_dict = json.loads(extracted_dict)
-  #       line_items.extend(extracted_dict)
   return line_items
 
 @st.cache_data()

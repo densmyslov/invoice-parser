@@ -18,11 +18,14 @@ import requests
 import uuid
 from datetime import datetime
 from io import BytesIO, StringIO
+from joblib import Parallel, delayed
 
 if 'sign_in_state' not in st.session_state:
     st.session_state['sign_in_state'] = 0
 if 'user_email' not in st.session_state:
     st.session_state['user_email'] = None
+if 'user_name' not in st.session_state:
+    st.session_state['user_name'] = None
 
 if st.session_state.user_email:
     st.sidebar.write(f"Signed in as {st.session_state.user_email}")
@@ -56,8 +59,10 @@ if st.session_state.user_email:
         st.session_state['counter'] += 1
         return st.session_state['counter']
 
-    if st.sidebar.button("Reset"):
+    if st.sidebar.button("Refresh"):
         st.session_state['counter'] = 0
+        st.rerun()
+    st.sidebar.write(st.session_state.user_name)
 
 
 
@@ -69,10 +74,10 @@ if st.session_state.user_email:
         uploaded_files = col1.file_uploader("Upload pdf invoices", 
                                         type=["pdf", "png", "jpg", "jpeg"],
                                         accept_multiple_files=True)
-        parser_type = 'gpt'
+        # @st.cache_data()
         def load_invoice_df(counter=None):
             bucket = 'bergena-invoice-parser'
-            key = f"accounts/{st.session_state.user_name}/invoice_df.parquet"
+            key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
             try:
                 invoice_df = utils.pd_read_parquet(s3_client, bucket, key)
             except:
@@ -80,7 +85,7 @@ if st.session_state.user_email:
             return invoice_df
 
 
-        invoice_df = load_invoice_df(counter = st.session_state['counter'])
+        invoices_df = load_invoice_df(counter = st.session_state['counter'])
 
         combined_images = []
         if uploaded_files is not None:
@@ -88,79 +93,237 @@ if st.session_state.user_email:
             for uploaded_file in uploaded_files:
                 file_details = {"FileName": uploaded_file.name, "FileType": uploaded_file.type}
                 file_uid= uuid.uuid4().hex
+                st.write(file_uid)
                 if uploaded_file.type == "application/pdf":
                     # Convert PDF to a list of images
                     images = parser.pdf_to_images(uploaded_file)
                     combined_image = parser.combine_images(images, direction='horizontal')
-                    extracted_words = parser.extract_words_from_pdf(uploaded_file)
-                    combined_images.append((file_uid, 
+                    extracted_words,pages_used_for_parsing = parser.extract_words_from_pdf(uploaded_file,
+                                                                    max_words_per_page=1700)
+                    combined_images.append((
+
+                                            file_uid, 
                                             extracted_words,
                                             uploaded_file.name, 
-                                            uploaded_file.type, 
+                                            uploaded_file.type,
+                                            pages_used_for_parsing,
                                             combined_image))
                     
             st.write(len(combined_images))
             image_data = []
             if len(combined_images)>0:
                 with st.expander("Show invoices"):
-                    for _,_,_,_, combined_image in combined_images:
+                    for _,_,_,_,pages_used_for_parsing, combined_image in combined_images:
+                        st.write(f"pages to be used for parsing: {','.join([str(i+1) for i in pages_used_for_parsing])}")
                         st.image(combined_image, use_column_width=True)
                 if st.button("Upload invoices to your cloud account",on_click=counter_up):
+                    for ind, uploaded_file in enumerate(uploaded_files):
+                        (file_uid,extracted_words, file_name,file_type, 
+                         pages_used_for_parsing, combined_image) = combined_images[ind]
+
+                        bucket = 'bergena-invoice-parser'
+                        pdf_key = f"accounts/{st.session_state.user_name}/pdfs/{ts}/{file_uid}.pdf"
+                        uploaded_file.seek(0)
+                        r = s3_client.upload_fileobj(
+                                                    uploaded_file,
+                                                    Bucket=bucket, 
+                                                     Key=pdf_key)
                     
-                    for file_uuid,extracted_words, file_name,file_type, combined_image in combined_images:
+                        
                         bucket = 'bergena-invoice-parser'
                         image_key = f"accounts/{st.session_state.user_name}/images/{ts}/{file_uid}.jpg"
                         buffer = BytesIO()
                         combined_image.save(buffer, format='jpeg')
                         r = s3_client.put_object(Bucket=bucket, Key=image_key, Body=buffer.getvalue(), ContentType='image/jpeg')
                         
-                        pdf_key = f"accounts/{st.session_state.user_name}/pdfs/{ts}/{file_uid}.pdf"
-                        r = s3_client.put_object(Bucket=bucket, Key=pdf_key, Body=uploaded_file, ContentType='application/pdf')
-                        image_data.append((file_uuid,extracted_words,file_name,file_type, ts, image_key, pdf_key))
-                        image_url = f"https://{bucket}.s3.amazonaws.com/{image_key}"
 
-                        image_html = f"""
-                                <!DOCTYPE html>
-                                <html lang="en">
-                                <head>
-                                    <meta charset="UTF-8">
-                                    <title>{uploaded_file.name}</title>
-                                </head>
-                                <body>
-                                    <img src="{image_url}" alt="{uploaded_file.name}">
-                                </body>
-                                </html>
-                                """
-                        buffer= StringIO(image_html)
-                        html_key = f"accounts/{st.session_state.user_name}/htmls/{ts}/{file_uid}.html"
-                        s3_client.put_object(
-                            Bucket=bucket,
-                            Key=html_key,
-                            Body = buffer.getvalue(),
-                            ContentType = 'text/html'
-                        )
+                        is_parsed = False
+                        source='manual'
+                        image_data.append((file_uid,extracted_words,file_name,file_type, 
+                                           ts, image_key, pdf_key, is_parsed,source,
+                                           pages_used_for_parsing))
+                        # image_url = f"https://{bucket}.s3.amazonaws.com/{image_key}"
+
+                        # image_html = f"""
+                        #         <!DOCTYPE html>
+                        #         <html lang="en">
+                        #         <head>
+                        #             <meta charset="UTF-8">
+                        #             <title>{uploaded_file.name}</title>
+                        #         </head>
+                        #         <body>
+                        #             <img src="{image_url}" alt="{uploaded_file.name}">
+                        #         </body>
+                        #         </html>
+                        #         """
+                        # buffer= StringIO(image_html)
+                        # html_key = f"accounts/{st.session_state.user_name}/htmls/{ts}/{file_uid}.html"
+                        # s3_client.put_object(
+                        #     Bucket=bucket,
+                        #     Key=html_key,
+                        #     Body = buffer.getvalue(),
+                        #     ContentType = 'text/html'
+                        # )
             
-                if len(image_data) > 0:
-                    df = pd.DataFrame(image_data, columns=['file_uuid','extracted_words','file_name','file_type','date','image_key','pdf_key'])
-                    st.dataframe(df)
-                    key = f"accounts/{st.session_state.user_name}/invoice_df.parquet"
-                    invoice_df = pd.concat([invoice_df, df],
-                                            ignore_index=True)
-                    utils.pd_save_parquet(s3_client, invoice_df, bucket, key)
-                    counter_up()
+                    if len(image_data) > 0:
+                        df = pd.DataFrame(image_data, 
+                                        columns=['file_uid',
+                                                'extracted_words',
+                                                'file_name','file_type','date',
+                                                'image_key','pdf_key','is_parsed',
+                                                'source','pages_used_for_parsing'])
+                        for col_name in ['prompt',
+                                         'completion',
+                                         'time_to_complete',
+                                         'model']:
+                            df[col_name] = None
+
+                        key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
+                        invoices_df = pd.concat([invoices_df, df],
+                                                ignore_index=True)
+                        utils.pd_save_parquet(s3_client, invoices_df, bucket, key)
+                        st.success("Your invoices have been uploaded :smile:")
+                        uploaded_files=None
+                        counter_up()
 
 
     with tab2:
+        def dataframe_with_selections(df: pd.DataFrame, init_value: bool = False) -> pd.DataFrame:
+            df_with_selections = df.copy()
+            # selected_all = st.toggle("Select all", key='select_all')
+            # if selected_all:
+            #     init_value = True
+            df_with_selections.insert(0, "Select", init_value)
+
+            # Get dataframe row-selections from user with st.data_editor
+            edited_df = st.data_editor(
+                df_with_selections,
+                hide_index=True,
+                column_config={"Select": st.column_config.CheckboxColumn(required=True)},
+                disabled=df.columns,
+            )
+
+            # Filter the dataframe using the temporary column, then drop the column
+            selected_rows = edited_df[edited_df.Select]
+            return selected_rows.drop('Select', axis=1)
+        def download_image(bucket, key):
+            # Use the S3 client to download the file
+            buffer= BytesIO()
+            s3_client.download_fileobj(bucket, key, buffer)
+            buffer.seek(0)
+            return Image.open(buffer)
+        
         bucket = 'bergena-invoice-parser'
-        key = f"accounts/{st.session_state.user_name}/invoice_df.parquet"
-        try:
-            invoice_df = utils.pd_read_parquet(s3_client, bucket, key)
-        except:
-            invoice_df = pd.DataFrame()
-        st.dataframe(invoice_df)
+        key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
+        invoices_df = utils.pd_read_parquet(s3_client, bucket, key)
+        if invoices_df.empty:
+            st.error("You have no invoices in your account")
+        else:
+            default_cols = ['file_name','date','is_parsed','image_key']
+            selection = dataframe_with_selections(invoices_df)
+        #===========================INVOICE PROCESSING====================================
+            col1, col2, col3 = st.columns(3)
+            #----------------------delete invoices
+            if col3.button(":red[Delete selected invoices]"):
+                invoices_df = invoices_df[~invoices_df.index.isin(selection.index)]
+                key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
+                utils.pd_save_parquet(s3_client, invoices_df, bucket, key)
+                st.success("Invoices deleted")
+                st.session_state['counter'] += 1
+                st.rerun()
+            #----------------------show invoices
+            def get_summary_df(gpt_response):
+                # gpt_response = completion['choices'][0]['message']['content']
+                json_data = json.loads(gpt_response)
+                summary = json_data['Summary']
+                invoice_summary_df = pd.DataFrame.from_dict(summary, orient='index').T
+                columns = ['Date of invoice','Due date']
+                for col_name in columns:
+                    value = invoice_summary_df[col_name].tolist()[0]
+                try:
+                    value = pd.to_datetime(value,
+                                        infer_datetime_format=True).strftime('%Y-%m-%d')
+                    invoice_summary_df.loc[0,col_name] = value
+                except:
+                    pass
+                return invoice_summary_df
+            
+            def get_line_items_df(gpt_response):
+                json_data = json.loads(gpt_response)
+                line_items = json_data['Line items']
+                if isinstance(line_items, list):
+                    line_items_df = pd.DataFrame(line_items)
+                else:
+                    line_items = list(line_items.items())[1]
+                    line_items_df = pd.DataFrame(line_items)
+                return line_items_df
+            if col2.button("Show selected invoices"):
+                if selection.empty:
+                    st.error("You have not selected any invoices")
+                    st.stop()
+                else:
+                    # images = []
+
+                    df_to_show = invoices_df.loc[selection.index,['date',
+                                                                  'file_name',
+                                                                  'is_parsed',
+                                                                  'completion',
+                                                                'source',
+                                                                'image_key']]
+                    df_to_show['gpt_response'] = None
+                    for row in df_to_show.itertuples():
+                        if row.is_parsed:
+                            gpt_response=  json.loads(row.completion)['choices'][0]['message']['content']
+                            # json_data = json.loads(gpt_response)
+                            # summary = json_data['Summary']
+                            invoice_summary_df = get_summary_df(gpt_response)
+                            # line_items_df = get_line_items_df(gpt_response)
+                            st.dataframe(invoice_summary_df)
+                            # st.dataframe(line_items_df)
+
+                            json_data = json.loads(gpt_response)
+                            line_items = json_data['Line items']
+                            st.write(line_items)
 
 
 
+                            img = download_image(bucket, row.image_key)
+                            st.image(img)
+
+
+
+
+                    # st.dataframe(df_to_show)
+                    # for key in selection['image_key']:
+                    #     img = download_image(bucket, key)
+                    #     st.image(img)
+            #----------------------parse invoices
+
+            if col1.button(":orange[Parse selected invoices]"):
+                if selection.empty:
+                    st.error("You have not selected any invoices")
+                    st.stop()
+                else:
+
+                    json_for_parsing={}
+                    for row in invoices_df.loc[selection.index].itertuples():
+                        st.write(row.file_name)
+                        constructed_text = parser.construct_text_from(row.extracted_words,
+                            stop_at_string=None)
+                        json_for_parsing[row.file_uid] = constructed_text
+                    # st.write(json_for_parsing)
+                    bucket='bergena-invoice-parser'
+                    s3_client.put_object(
+                        Bucket=bucket,
+                        Key=f"accounts/{st.session_state.user_name}/parsing/json_for_parsing.json",
+                        Body = json.dumps(json_for_parsing)
+                    )
+                    st.success("Invoices sent for parsing")
+
+
+
+
+            
 
     st.stop()
 

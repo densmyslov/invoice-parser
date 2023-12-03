@@ -88,10 +88,11 @@ with st.form('sign_up_form'):
     st.session_state.password = st.text_input(tl.account_setup_dict['sign_up_form_2'][selected_language], type='password')
 
     # given_name
-    st.session_state.user_given_name = st.text_input(tl.account_setup_dict['sign_up_form_3'][selected_language])
+    # st.session_state.user_given_name = st.text_input(tl.account_setup_dict['sign_up_form_3'][selected_language])
+    st.session_state.user_given_name = st.text_input("First name (optional)")
 
     # family_name
-    st.session_state.user_family_name = st.text_input(tl.account_setup_dict['sign_up_form_4'][selected_language])
+    st.session_state.user_family_name = st.text_input("Last name (optional)")
 
 
     
@@ -104,7 +105,7 @@ with st.form('sign_up_form'):
                                 CUSTOMERS_TABLE_NAME,  
                                 st.session_state.user_email)
         
-        st.write(email_exists)
+        # st.write(email_exists)
         if email_exists:
             st.session_state.sign_up_state = 2
 
@@ -158,7 +159,8 @@ if st.session_state.sign_up_state == "email_confirmation_required":
                     st.session_state.user_family_name = None
                     st.session_state.delete_account=False
                     st.session_state.sign_in_state = None
-                    st.rerun()
+                    # st.rerun()
+                    st.success("Success ! Your account has been activated")
             # except:
             #     st.error("Error confirming email address")
 

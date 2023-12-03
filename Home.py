@@ -86,14 +86,15 @@ if 'delete_account' not in st.session_state:
 
 if st.session_state.user_email:
     st.write(f"You are signed in as {st.session_state.user_email}")
+    st.write(f"Your user name is {st.session_state.user_name}")
 
 else:
 
 
     with st.form(key='sign_in_form'):
 
-        st.session_state.user_email = st.text_input(label=tl.account_setup_dict['sign_up_form_1'][st.session_state.selected_language])
-        st.session_state.password = st.text_input(label=tl.account_setup_dict['sign_up_form_2'][st.session_state.selected_language], 
+        st.session_state.user_email = st.text_input("email address")
+        st.session_state.password = st.text_input("password", 
                                 type='password')
 
         submit_button = st.form_submit_button(label="sign-in")
@@ -135,6 +136,7 @@ else:
                         
                         # st.session_state.email = email
                         st.success(f"You are signed in as {st.session_state.user_email}")
+                        st.write(f"Your user name is {st.session_state.user_name}")
 
                     
 
@@ -150,7 +152,8 @@ else:
                     st.session_state.sign_in_state = 'email_confirmation_required'
 
             else:
-                st.error(tl.account_setup_dict['email_not_exists_error_0'][st.session_state.selected_language])
+                st.error("Your password or email is incorrect")
+                # st.error(tl.account_setup_dict['email_not_exists_error_0'][st.session_state.selected_language])
                 # st.error(tl.account_setup_dict['email_not_exists_error_1'][st.session_state.selected_language])
                 # st.error(tl.account_setup_dict['email_not_exists_error_2'][st.session_state.selected_language])
 
@@ -160,6 +163,7 @@ else:
                 st.session_state.user_email=None
                 st.session_state.password=None
                 st.stop()
+            st.rerun()
 
 if st.session_state.sign_in_state == 'email_confirmation_required':
     st.write("Please confirm your email")
@@ -179,11 +183,11 @@ if st.session_state.sign_in_state == 'email_confirmation_required':
         if st.form_submit_button(label=tl.submit_button_label[st.session_state.selected_language]):
             try:
                 r = cognito_service.confirm_user_sign_up(st.session_state.user_name, 
-                                                        st.session_state.email, 
+                                                        st.session_state.user_email, 
                                                         verification_code)
                 if r:
                     
-                    st.write(tl.account_setup_dict['success_message'][st.session_state.selected_language])
+                    st.write("Success ! Your account has been activated")
                     st.session_state.sign_in_state = 'email_confirmed'
                 else:
                     st.write(tl.account_setup_dict['error_message'][st.session_state.selected_language])
@@ -201,6 +205,8 @@ if st.session_state.user_email:
     
     if st.button(":red[Delete account]"):
         st.session_state.delete_account=True
+        st.rerun()
+
 if st.session_state.delete_account:
         st.write(":red[Are you sure you want to delete your account?]")
         if st.button("Yes, delete my account"):
@@ -212,19 +218,19 @@ if st.session_state.delete_account:
             )
 
             st.write("Your account has been deleted")
-            # Delete the item from the table
+            # Delete user from DynamoDB invoiceParserCustomers
             item_key = {
                 'user_id': {'S': st.session_state.user_name},  # Replace with your user_id
                 'email': {'S': st.session_state.user_email}       # Replace with your email
             }
 
-            # Delete the item
+            # Delete item
             r = dynamodb_client.delete_item(
                 TableName=CUSTOMERS_TABLE_NAME,
                 Key=item_key
             )
 
-            # Name of the bucket you want to delete
+            # Delete user folder and its objects in s3
             bucket_name = 'bergena-invoice-parser'
             prefix = f"accounts/{st.session_state.user_name}"
 
@@ -251,7 +257,11 @@ if st.session_state.delete_account:
             st.session_state.user_given_name = None
             st.session_state.user_family_name = None
             st.session_state.delete_account = False
+   
+            st.rerun()
 
 
 if st.session_state.user_email:
     st.sidebar.write(f"You are signed in as {st.session_state.user_email}")
+else:
+    st.sidebar.write("You are not signed in")
