@@ -1,24 +1,22 @@
 import streamlit as st
-import fitz
 import io
 from PIL import Image
 import pandas as pd
 from time import time
-from difflib import SequenceMatcher
+# from difflib import SequenceMatcher
 import utils
 from time import time
-import pdfplumber
 import json
 import re
 import numpy as np
-import math
+# import math
 import utils_parser as parser
 import openai
-import requests
+# import requests
 import uuid
 from datetime import datetime
 from io import BytesIO, StringIO
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 
 if 'sign_in_state' not in st.session_state:
     st.session_state['sign_in_state'] = 0
