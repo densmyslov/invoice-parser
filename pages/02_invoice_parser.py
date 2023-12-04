@@ -175,7 +175,9 @@ if st.session_state.user_email:
                         for col_name in ['prompt',
                                          'completion',
                                          'time_to_complete',
-                                         'model']:
+                                         'model',
+                                         'total_sum_check',
+                                         'line_items_sum_check']:
                             df[col_name] = None
 
                         key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
@@ -287,8 +289,8 @@ if st.session_state.user_email:
 
 
 
-                            img = download_image(bucket, row.image_key)
-                            st.image(img)
+                        img = download_image(bucket, row.image_key)
+                        st.image(img)
 
 
 
@@ -298,7 +300,7 @@ if st.session_state.user_email:
                     #     img = download_image(bucket, key)
                     #     st.image(img)
             #----------------------parse invoices
-
+# triggers lambda 'invPar-step-function-trigger' which inturn triggers step machine 'invPar-step-function'
             if col1.button(":orange[Parse selected invoices]"):
                 if selection.empty:
                     st.error("You have not selected any invoices")
@@ -310,7 +312,9 @@ if st.session_state.user_email:
                         st.write(row.file_name)
                         constructed_text = parser.construct_text_from(row.extracted_words,
                             stop_at_string=None)
-                        json_for_parsing[row.file_uid] = constructed_text
+                        
+                        json_for_parsing[row.file_uid] = {'constructed_text': constructed_text,
+                                                          'model':'gpt-3.5-turbo-1106'}
                     # st.write(json_for_parsing)
                     bucket='bergena-invoice-parser'
                     s3_client.put_object(
