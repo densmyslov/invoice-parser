@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from dotenv import dotenv_values
+# from dotenv import dotenv_values
 import boto3
 # from cognito import CognitoIdentityProviderWrapper as cogwrap
 import cognito
@@ -142,7 +142,7 @@ else:
 
 
 
-                    except ClientError as e:
+                    except :
                         # st.write('cognito failure to sign in')
                         st.error("wrong password")
                         st.rerun()

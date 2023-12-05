@@ -63,11 +63,11 @@ def get_prompt(constructed_text):
       'Packing' : '1.00',
       'Freight' : '10.00',
       'Invoice currency': 'USD',
-      'Issued by': 'Ascend Distribution LLC',
+      'Issued by': 'Pot LLC',
       'Issued to person': 'John Doe',
-      'Issued to business': 'Hi Standards Marketplace / Ten Twenty Holdings',
-      'Issued by address': '941 Avenue N, Suite A, Grand Prairie, TX 75050, United States',
-      'Issued to address': '867 Boylston St 5th Floor #1336, BOSTON 02116 MA, United States'}
+      'Issued to business': 'Coca Cola, Inc.',
+      'Issued by address': '941 Avenue N, Ste A, Houston, TX 75050, United States',
+      'Issued to address': '1 Main St 5th Floor #1, BOSTON 02116 MA, United States'}
   }
 
 
@@ -81,14 +81,14 @@ def get_prompt(constructed_text):
   Ensure that all line items are parsed and in the exact order as they appear in the invoice.
   Do not make any assumptions about missing values; use None instead.
   Remember that in Europe comma is used as a decimal separator, and dot is used as a thousand separator.
-  Convert all prices and amounts to float using US decimal separator.
-  Convert quantity to integer.
-  Example of an line_items output:
+  Convert all prices, amounts, quantities to float using US decimal separator.
+ 
+  Example of a line_items output:
   {'Line items':
     [
-      {'Product id': 'B9414851','Item name': 'Dixie Perfectouch Insulated Paper Hot Cup, Coffee Haze Design, 75 Count 16oz', 'Item quantity': 200, 'Item unit price': 12, 'Item total price': 2400.00},
-    {'Product id': 'AZ-345BF', 'Item name': 'Breathe Right Nasal Strips, Extra Clear for Sensitive Skin, 72 Clear Strips', 'Item quantity': 200, 'Item unit price': 13.65, 'Item total price': 2730.00},
-    {'Product id': 'g345-JJ-k100','Item name': 'Pup-Peroni Dog Snacks Original Beef Flavor, 50 oz', 'Item quantity': 200, 'Item unit price': 18.96, 'Item total price': 3792.00}
+      {'Product id': 'B9414851','Item name': 'Dixie Perfectouch Insulated Paper Hot Cup, Coffee Haze Design, 75 Count 16oz', 'Item quantity': 20.00, 'Item unit price': 12, 'Item total price': 2400.00},
+    {'Product id': 'AZ-345BF', 'Item name': 'Breathe Right Nasal Strips, Extra Clear for Sensitive Skin, 72 Clear Strips', 'Item quantity': 20.00, 'Item unit price': 13.65, 'Item total price': 2730.00},
+    {'Product id': 'g345-JJ-k100','Item name': 'Pup-Peroni Dog Snacks Original Beef Flavor, 50 oz', 'Item quantity': 200.00, 'Item unit price': 18.96, 'Item total price': 3792.00}
     ]
   }
     Return output as json comprising Summary and Line items

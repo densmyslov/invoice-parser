@@ -19,6 +19,7 @@ from openpyxl.utils import get_column_letter
 from dotenv import load_dotenv
 import cognito
 from botocore.exceptions import ClientError
+from PIL import Image
 
 # s3_client_BRG = boto3.client('s3',
 #             aws_access_key_id = 'AKIAQZSZZFTKDGNFQVGL',
@@ -70,6 +71,25 @@ rekognition_client= boto3.client('rekognition',
 
 # FUNCTIONS
 
+def dataframe_with_selections(df: pd.DataFrame, init_value: bool = False) -> pd.DataFrame:
+    df_with_selections = df.copy()
+    # selected_all = st.toggle("Select all", key='select_all')
+    # if selected_all:
+    #     init_value = True
+    df_with_selections.insert(0, "Select", init_value)
+
+    # Get dataframe row-selections from user with st.data_editor
+    edited_df = st.data_editor(
+        df_with_selections,
+        hide_index=True,
+        column_config={"Select": st.column_config.CheckboxColumn(required=True)},
+        disabled=df.columns,
+    )
+
+    # Filter the dataframe using the temporary column, then drop the column
+    selected_rows = edited_df[edited_df.Select]
+    return selected_rows.drop('Select', axis=1)
+
 def delete_record(
                     dynamodb_client,
                     table_name, 
@@ -89,6 +109,13 @@ def delete_record(
     except Exception as e:
         print(f'Error deleting record: {e}')
         raise
+
+def download_image(s3_client,bucket, key):
+    # Use the S3 client to download the file
+    buffer= BytesIO()
+    s3_client.download_fileobj(bucket, key, buffer)
+    buffer.seek(0)
+    return Image.open(buffer)
 
 # @st.cache_data()
 def email_exists(_dynamodb_client, table_name, email):

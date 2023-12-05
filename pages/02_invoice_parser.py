@@ -65,7 +65,9 @@ if st.session_state.user_email:
 
 
     st.title(":orange[PDF Invoice Parser]")
-    tab1, tab2 = st.tabs(["Upload invoices","View your invoices"])
+    tab1, tab2 = st.tabs(["Upload invoices","Parse Invoices"])
+
+    #=================================UPLOAD INVOICES====================================================
     with tab1:
 
         col1, col2 = st.columns(2)
@@ -91,7 +93,7 @@ if st.session_state.user_email:
             for uploaded_file in uploaded_files:
                 file_details = {"FileName": uploaded_file.name, "FileType": uploaded_file.type}
                 file_uid= uuid.uuid4().hex
-                st.write(file_uid)
+                # st.write(file_uid)
                 if uploaded_file.type == "application/pdf":
                     # Convert PDF to a list of images
                     images = parser.pdf_to_images(uploaded_file)
@@ -107,12 +109,13 @@ if st.session_state.user_email:
                                             pages_used_for_parsing,
                                             combined_image))
                     
-            st.write(len(combined_images))
+            st.write(f":blue[number of invoices:{len(combined_images)}]")
             image_data = []
             if len(combined_images)>0:
                 with st.expander("Show invoices"):
-                    for _,_,_,_,pages_used_for_parsing, combined_image in combined_images:
-                        st.write(f"pages to be used for parsing: {','.join([str(i+1) for i in pages_used_for_parsing])}")
+                    for _,_,file_name,_,pages_used_for_parsing, combined_image in combined_images:
+                        st.write(f"file name: :blue[{file_name}]")
+                        st.write(f"pages to be used for parsing: {','.join([str(i+1) for i in pages_used_for_parsing])}")                      
                         st.image(combined_image, use_column_width=True)
                 if st.button("Upload invoices to your cloud account",on_click=counter_up):
                     for ind, uploaded_file in enumerate(uploaded_files):
@@ -177,41 +180,26 @@ if st.session_state.user_email:
                                          'total_sum_check',
                                          'line_items_sum_check']:
                             df[col_name] = None
+                        
+                        df['invoice_type'] = df['extracted_words'].apply(lambda x: 
+                                                                         'image' if len(x)==0 
+                                                                         else 'text')
 
                         key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
                         invoices_df = pd.concat([invoices_df, df],
                                                 ignore_index=True)
                         utils.pd_save_parquet(s3_client, invoices_df, bucket, key)
-                        st.success("Your invoices have been uploaded :smile:")
+                        if len(image_data)==1:
+                            st.success("Your invoice has been uploaded :smile:")
+                        else:
+                            st.success("Your invoices have been uploaded :smile:")
                         uploaded_files=None
                         counter_up()
 
-
+    #=================================PARSE INVOICES====================================================
     with tab2:
-        def dataframe_with_selections(df: pd.DataFrame, init_value: bool = False) -> pd.DataFrame:
-            df_with_selections = df.copy()
-            # selected_all = st.toggle("Select all", key='select_all')
-            # if selected_all:
-            #     init_value = True
-            df_with_selections.insert(0, "Select", init_value)
 
-            # Get dataframe row-selections from user with st.data_editor
-            edited_df = st.data_editor(
-                df_with_selections,
-                hide_index=True,
-                column_config={"Select": st.column_config.CheckboxColumn(required=True)},
-                disabled=df.columns,
-            )
 
-            # Filter the dataframe using the temporary column, then drop the column
-            selected_rows = edited_df[edited_df.Select]
-            return selected_rows.drop('Select', axis=1)
-        def download_image(bucket, key):
-            # Use the S3 client to download the file
-            buffer= BytesIO()
-            s3_client.download_fileobj(bucket, key, buffer)
-            buffer.seek(0)
-            return Image.open(buffer)
         
         bucket = 'bergena-invoice-parser'
         key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
@@ -219,8 +207,11 @@ if st.session_state.user_email:
         if invoices_df.empty:
             st.error("You have no invoices in your account")
         else:
-            default_cols = ['file_name','date','is_parsed','image_key']
-            selection = dataframe_with_selections(invoices_df)
+            default_cols = ['file_name','date','is_parsed','model',
+                            'total_sum_check','line_items_sum_check','time_to_complete',
+                            'invoice_type','source','image_key']
+            selection = utils.dataframe_with_selections(invoices_df[default_cols])
+        
         #===========================INVOICE PROCESSING====================================
             col1, col2, col3 = st.columns(3)
             #----------------------delete invoices
@@ -287,7 +278,7 @@ if st.session_state.user_email:
 
 
 
-                        img = download_image(bucket, row.image_key)
+                        img = utils.download_image(s3_client,bucket, row.image_key)
                         st.image(img)
 
 
