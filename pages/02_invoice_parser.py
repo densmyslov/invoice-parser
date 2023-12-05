@@ -293,7 +293,7 @@ if st.session_state.user_email:
                             Key=f"accounts/{st.session_state.user_name}/parsing/json_for_parsing.json",
                             Body = json.dumps(json_for_parsing)
                         )
-                        st.success("Invoices sent for parsing")
+                        st.success("Invoices sent for parsing. Click on 'Refresh' to see the results")
                     st.error(f"Image invoices: {image_invoices} are not supported at the moment")
 
 
