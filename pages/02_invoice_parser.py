@@ -207,9 +207,9 @@ if st.session_state.user_email:
         if invoices_df.empty:
             st.error("You have no invoices in your account")
         else:
-            default_cols = ['file_name','date','is_parsed','model',
+            default_cols = ['file_name','invoice_type','date','is_parsed','model',
                             'total_sum_check','line_items_sum_check','time_to_complete',
-                            'invoice_type','source','image_key']
+                            'source','image_key']
             selection = utils.dataframe_with_selections(invoices_df[default_cols])
         
         #===========================INVOICE PROCESSING====================================
@@ -223,16 +223,7 @@ if st.session_state.user_email:
                 st.session_state['counter'] += 1
                 st.rerun()
             #----------------------show invoices
-            
-            # def get_line_items_df(gpt_response):
-            #     json_data = json.loads(gpt_response)
-            #     line_items = json_data['Line items']
-            #     if isinstance(line_items, list):
-            #         line_items_df = pd.DataFrame(line_items)
-            #     else:
-            #         line_items = list(line_items.items())[1]
-            #         line_items_df = pd.DataFrame(line_items)
-            #     return line_items_df
+
             if col2.button("Show selected invoices"):
                 if selection.empty:
                     st.error("You have not selected any invoices")
@@ -282,23 +273,28 @@ if st.session_state.user_email:
                     st.error("You have not selected any invoices")
                     st.stop()
                 else:
-
+                    image_invoices = []
                     json_for_parsing={}
                     for row in invoices_df.loc[selection.index].itertuples():
-                        st.write(row.file_name)
-                        constructed_text = parser.construct_text_from(row.extracted_words,
-                            stop_at_string=None)
-                        
-                        json_for_parsing[row.file_uid] = {'constructed_text': constructed_text,
-                                                          'model':'gpt-3.5-turbo-1106'}
+                        if row.invoice_type == 'text':
+                            st.write(row.file_name)
+                            constructed_text = parser.construct_text_from(row.extracted_words,
+                                stop_at_string=None)
+                            
+                            json_for_parsing[row.file_uid] = {'constructed_text': constructed_text,
+                                                            'model':'gpt-3.5-turbo-1106'}
+                        else:
+                            image_invoices.append(row.file_name)
                     # st.write(json_for_parsing)
-                    bucket='bergena-invoice-parser'
-                    s3_client.put_object(
-                        Bucket=bucket,
-                        Key=f"accounts/{st.session_state.user_name}/parsing/json_for_parsing.json",
-                        Body = json.dumps(json_for_parsing)
-                    )
-                    st.success("Invoices sent for parsing")
+                    if len(json_for_parsing)>0:
+                        bucket='bergena-invoice-parser'
+                        s3_client.put_object(
+                            Bucket=bucket,
+                            Key=f"accounts/{st.session_state.user_name}/parsing/json_for_parsing.json",
+                            Body = json.dumps(json_for_parsing)
+                        )
+                        st.success("Invoices sent for parsing")
+                    st.error(f"Image invoices: {image_invoices} are not supported at the moment")
 
 
 

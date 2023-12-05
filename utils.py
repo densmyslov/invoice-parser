@@ -90,6 +90,7 @@ def dataframe_with_selections(df: pd.DataFrame, init_value: bool = False) -> pd.
     selected_rows = edited_df[edited_df.Select]
     return selected_rows.drop('Select', axis=1)
 
+
 def delete_record(
                     dynamodb_client,
                     table_name, 
