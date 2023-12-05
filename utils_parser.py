@@ -383,6 +383,32 @@ def convert_str_to_num(df0, columns):
                pass
     return df
 
+def get_line_items_df(gpt_response):
+    json_data = json.loads(gpt_response)
+    line_items = json_data['Line items']
+    if isinstance(line_items, list):
+        line_items_df = pd.DataFrame(line_items)
+    else:
+        line_items = list(line_items.values())[0]
+        line_items_df = pd.DataFrame(line_items)
+    return line_items_df
+
+def get_summary_df(gpt_response):
+    # gpt_response = completion['choices'][0]['message']['content']
+    json_data = json.loads(gpt_response)
+    summary = json_data['Summary']
+    invoice_summary_df = pd.DataFrame.from_dict(summary, orient='index').T
+    columns = ['Date of invoice','Due date']
+    for col_name in columns:
+        value = invoice_summary_df[col_name].tolist()[0]
+    try:
+        value = pd.to_datetime(value,
+                            infer_datetime_format=True).strftime('%Y-%m-%d')
+        invoice_summary_df.loc[0,col_name] = value
+    except:
+        pass
+    return invoice_summary_df
+
 @st.cache_data()
 def get_summary_lines_from(gpt_response,
                            counter=None):
@@ -666,54 +692,6 @@ def get_summary_fields(r):
           due_date, invoice_number, total, tax)
 
 
-def get_line_items_df(r):
-  line_items = []
-  for item in r['ExpenseDocuments'][0]['LineItemGroups']:
-    for i in item['LineItems']:
-      for j in i['LineItemExpenseFields']:
-        type_text = j['Type']['Text']
-        type_text_confidence = j['Type']['Confidence']
-        try:
-          label_text = j['LabelDetection']['Text']
-          label_text_confidence = j['LabelDetection']['Confidence']
-        except:
-          label_text = None
-          label_text_confidence = None
-
-        value_text = j['ValueDetection']['Text']
-        value_text_confidence = j['ValueDetection']['Confidence']
-        page_num = j['PageNumber']
-        geometry = j['ValueDetection']['Geometry']
-        left = geometry['BoundingBox']['Left']
-        top = geometry['BoundingBox']['Top']
-        width= geometry['BoundingBox']['Width']
-        height = geometry['BoundingBox']['Height']
-        line_items.append((type_text,
-                          label_text,
-                          value_text,
-                          left,
-                          top,
-                          width,
-                          height,
-                          page_num,
-                          type_text_confidence,
-                          label_text_confidence,
-                          value_text_confidence))
-
-  cols = ['type_text',
-          'label_text',
-          'value_text',
-          'left',
-          'top',
-          'width',
-          'height',
-          'page_num',
-          'type_text_confidence',
-          'label_text_confidence',
-          'value_text_confidence',
-          ]
-  return  pd.DataFrame(line_items, columns=cols)
-
 
 def parse_line_items_df(line_items_df):
   df = line_items_df.copy()
@@ -770,8 +748,4 @@ def parse_line_items_df(line_items_df):
   # items_df['amount'] = items_df['amount'].str.replace("[$,]","",regex=True).str.extract(r"(\d+\.*\d*)")
   return items_df
 
-@st.cache_data()
-def get_line_items(r):
-  line_items_df = get_line_items_df(r)
-  items_df = parse_line_items_df(line_items_df)
-  return items_df
+

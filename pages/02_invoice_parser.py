@@ -223,31 +223,16 @@ if st.session_state.user_email:
                 st.session_state['counter'] += 1
                 st.rerun()
             #----------------------show invoices
-            def get_summary_df(gpt_response):
-                # gpt_response = completion['choices'][0]['message']['content']
-                json_data = json.loads(gpt_response)
-                summary = json_data['Summary']
-                invoice_summary_df = pd.DataFrame.from_dict(summary, orient='index').T
-                columns = ['Date of invoice','Due date']
-                for col_name in columns:
-                    value = invoice_summary_df[col_name].tolist()[0]
-                try:
-                    value = pd.to_datetime(value,
-                                        infer_datetime_format=True).strftime('%Y-%m-%d')
-                    invoice_summary_df.loc[0,col_name] = value
-                except:
-                    pass
-                return invoice_summary_df
             
-            def get_line_items_df(gpt_response):
-                json_data = json.loads(gpt_response)
-                line_items = json_data['Line items']
-                if isinstance(line_items, list):
-                    line_items_df = pd.DataFrame(line_items)
-                else:
-                    line_items = list(line_items.items())[1]
-                    line_items_df = pd.DataFrame(line_items)
-                return line_items_df
+            # def get_line_items_df(gpt_response):
+            #     json_data = json.loads(gpt_response)
+            #     line_items = json_data['Line items']
+            #     if isinstance(line_items, list):
+            #         line_items_df = pd.DataFrame(line_items)
+            #     else:
+            #         line_items = list(line_items.items())[1]
+            #         line_items_df = pd.DataFrame(line_items)
+            #     return line_items_df
             if col2.button("Show selected invoices"):
                 if selection.empty:
                     st.error("You have not selected any invoices")
@@ -260,6 +245,7 @@ if st.session_state.user_email:
                                                                   'is_parsed',
                                                                   'completion',
                                                                 'source',
+                                                                'pages_used_for_parsing',
                                                                 'image_key']]
                     df_to_show['gpt_response'] = None
                     for row in df_to_show.itertuples():
@@ -267,13 +253,14 @@ if st.session_state.user_email:
                             gpt_response=  json.loads(row.completion)['choices'][0]['message']['content']
                             # json_data = json.loads(gpt_response)
                             # summary = json_data['Summary']
-                            invoice_summary_df = get_summary_df(gpt_response)
+                            invoice_summary_df = parser.get_summary_df(gpt_response)
                             # line_items_df = get_line_items_df(gpt_response)
                             st.dataframe(invoice_summary_df)
                             # st.dataframe(line_items_df)
 
-                            json_data = json.loads(gpt_response)
-                            line_items = json_data['Line items']
+                            # json_data = json.loads(gpt_response)
+                            # line_items = json_data['Line items']
+                            line_items = parser.get_line_items_df(gpt_response)
                             st.write(line_items)
 
 
