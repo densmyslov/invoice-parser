@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import numpy as np
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 import sys
 import subprocess
@@ -113,6 +113,7 @@ def delete_record(
 
 def download_image(s3_client,bucket, key):
     # Use the S3 client to download the file
+    
     buffer= BytesIO()
     s3_client.download_fileobj(bucket, key, buffer)
     buffer.seek(0)
@@ -168,6 +169,43 @@ def get_dynamodb_table_record_from_(_dynamodb_client,
           })
   if r['Count']>0:
     return r['Items']
+  
+def get_latest_keys_from_(s3_client,
+                          bucket, 
+                          prefix, 
+                          time_interval=1, 
+                          time_unit='hour', 
+                          additional_str='',
+                          zipped=False):
+  pat = re.compile(additional_str, re.I)
+  paginator = s3_client.get_paginator('list_objects')
+
+  try:
+    page_iterator = paginator.paginate(Bucket=bucket,
+                                      Prefix = prefix)
+    key_ts = []
+    for page in page_iterator:
+      page_keys = [(i['Key'],i['LastModified']) for i in page['Contents'] if pat.search(i['Key'])]
+      key_ts.extend(page_keys)
+    key_ts.sort(key=lambda x: x[1], reverse=True)
+
+    ts_latest = key_ts[0][1]
+    time_units = {'second': 'seconds', 'hour': 'hours', 'day': 'days'}
+    ts_earliest = ts_latest - timedelta(**{time_units[time_unit]: time_interval})
+
+    latest_keys = [key[0] for key in key_ts if ts_earliest <= key[1] <= ts_latest]
+    latest_ts = [key[1] for key in key_ts if ts_earliest <= key[1] <= ts_latest]
+    last_ts_hour = ts_latest.strftime("%Y-%m-%d-%H")
+    if zipped:
+      return zip(latest_ts, latest_keys)
+    
+  except:
+    last_ts_hour = None
+    latest_keys = []
+    if zipped:
+      return zip([],[])
+  return last_ts_hour, latest_keys
+
 
 @st.cache_data()
 def get_matched_datasets(selected_market_abbr):
@@ -488,8 +526,16 @@ def get_download_file_from_(df0, selected_market, sku_length, sku_prefix):
         output_buffer.seek(0)  # Reset the buffer position to the beginning
 
         return output_buffer
-
-
+    
+@st.cache_data()
+def load_invoice_df(_s3_client, counter=None):
+    bucket = 'bergena-invoice-parser-prod'
+    key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
+    try:
+        invoice_df = pd_read_parquet(_s3_client, bucket, key)
+    except:
+        invoice_df = pd.DataFrame()
+    return invoice_df
 
 def password_is_valid(password):
     # At least 8 characters in length
