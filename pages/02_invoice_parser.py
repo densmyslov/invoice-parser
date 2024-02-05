@@ -294,14 +294,16 @@ if st.session_state.user_email:
                                                                 num_rows="dynamic")
                                 tab_names = [f"page {i+1}" for i in range(len(page_keys_df))]
                                 # if page_keys:
-                                with show_col2.container(height=375):
+                                # with show_col2.container(height=375):
+                                with show_col2.container():
                                     for ind, page_tab in enumerate(st.tabs(tab_names)):
 
                                             
                                             page_tab.image(invoice_images[ind])
                             with st.expander(":green[Show invoice line items:]"):
                                 # show_col1, show_col2 = st.columns((1,2))
-                                with st.container(height=300):
+                                # with st.container(height=300):
+                                with st.container():
                                     st.write(f"Sum total of line items = {line_items_df.iloc[0,-1]}")
                                     st.dataframe(line_items_df.iloc[:,1:-1],
                                                                     column_order=('Line item product IDs',
@@ -311,7 +313,8 @@ if st.session_state.user_email:
                                                                                    'Line item total amounts'))
                                 
                                 # if page_keys:
-                                with st.container(height=375):
+                                # with st.container(height=375):
+                                with st.container():
                                     tab_names = [f"page {i+1}" for i in range(len(page_keys_df))]
                                     for ind, page_tab in enumerate(st.tabs(tab_names)):
 
@@ -328,7 +331,7 @@ if st.session_state.user_email:
                         try:
                             with st.expander("Show raw completion"):
 
-                                st.write(page_keys)
+                                # st.write(page_keys)
                                 st.write(gpt_response)
                         except:
                             pass
