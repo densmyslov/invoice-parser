@@ -26,6 +26,8 @@ st.set_page_config(page_title='PDF Invoice Parser',
                    initial_sidebar_state="auto", 
                    menu_items=None)
 
+st.write(st.__version__)
+
 BUCKET = bucket = 'bergena-invoice-parser-prod'
 
 if 'sign_in_state' not in st.session_state:
