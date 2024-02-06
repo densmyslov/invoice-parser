@@ -37,14 +37,17 @@ if 'user_email' not in st.session_state:
 if 'user_name' not in st.session_state:
     st.session_state['user_name'] = None
 
-if 'tokens' not in st.session_state:
-# if not st.session_state['tokens']['access_token']:
-    st.warning("Please sign in at Home page to use the app")
+# if 'tokens' not in st.session_state:
+# # if not st.session_state['tokens']['access_token']:
+#     st.warning("Please sign in at Home page to use the app")
+try:
+    if st.session_state['tokens']['access_token']:
+        st.sidebar.write(f"Signed in as {st.session_state.user_email}")
 
-if st.session_state['tokens']['access_token']:
-    st.sidebar.write(f"Signed in as {st.session_state.user_email}")
-    access_token = st.session_state['tokens']['access_token']
-    customer_id = st.session_state[access_token]
+        access_token = st.session_state['tokens']['access_token']
+        customer_id = st.session_state[access_token]['customer_id']
+        st.sidebar.write(f"Customer ID:")
+        st.sidebar.write(customer_id)
 
 
     s3_client = utils.s3_client_BRG
@@ -87,7 +90,7 @@ if st.session_state['tokens']['access_token']:
     if st.sidebar.button("Refresh"):
         st.session_state['counter'] +=1
         st.rerun()
-    st.sidebar.write(customer_id)
+    # st.sidebar.write(customer_id)
 
 
 
@@ -188,7 +191,9 @@ if st.session_state['tokens']['access_token']:
 
         # parser_mode = st.sidebar.radio("Parser mode",("Image","Text"), key = 'parser_mode')
 
-        invoices_df = utils.load_invoice_df(s3_client, counter = st.session_state['counter'])
+        invoices_df = utils.load_invoice_df(s3_client,
+                                            st.session_state[access_token]['customer_id'],
+                                            counter = st.session_state['counter'])
         if invoices_df.empty:
             st.error("You have no invoices in your account")
         else:
@@ -368,7 +373,9 @@ if st.session_state['tokens']['access_token']:
 
 
 
-
+except:
+    st.warning("Please sign in at Home page to use the app")
+    st.stop()
             
 
  

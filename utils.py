@@ -528,9 +528,9 @@ def get_download_file_from_(df0, selected_market, sku_length, sku_prefix):
         return output_buffer
     
 @st.cache_data()
-def load_invoice_df(_s3_client, counter=None):
+def load_invoice_df(_s3_client, customer_id, counter=None):
     bucket = 'bergena-invoice-parser-prod'
-    key = f"accounts/{st.session_state.user_name}/invoices_df.parquet"
+    key = f"accounts/{customer_id}/invoices_df.parquet"
     try:
         invoice_df = pd_read_parquet(_s3_client, bucket, key)
     except:

@@ -123,15 +123,17 @@ else:
             if r:
 
                 email_status=r[0]['email_status']['S']
-                st.session_state.user_name = r[0]['user_id']['S']
+                st.session_state.customer_id = r[0]['user_id']['S']
                 if email_status =='CONFIRMED':
 
                     try:
 
                         access_token, refresh_token, id_token = cognito_service.sign_in_user(st.session_state.user_email, 
                                                                                                 st.session_state.password)
+                        
                         # store user_name in session_state so that it won't be overwritten by other users
-                        st.session_state[access_token] = st.session_state.user_user_name
+                        st.session_state[access_token] = {'customer_id': st.session_state.customer_id,
+                                                          'user_email': st.session_state.user_email,}
 
                         if access_token and refresh_token and id_token:
                             st.session_state['tokens'] = {'access_token': access_token, 
@@ -261,7 +263,12 @@ if st.session_state.delete_account:
             st.rerun()
 
 
-if st.session_state['tokens']['access_token']:
-    st.sidebar.write(f"You are signed in as {st.session_state.user_email}")
+if st.session_state['tokens']['access_token']: 
+    access_token = st.session_state['tokens']['access_token']
+    customer_id = st.session_state[access_token]['customer_id']
+    user_email = st.session_state[st.session_state['tokens']['access_token']]['user_email']
+    st.sidebar.write(f"You are signed in as {user_email}")
+    st.sidebar.write(f"Your Customer_ID:")
+    st.sidebar.write(customer_id)
 else:
     st.sidebar.write("You are not signed in")
