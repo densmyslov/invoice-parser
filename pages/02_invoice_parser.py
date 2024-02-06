@@ -37,8 +37,8 @@ if 'user_email' not in st.session_state:
 if 'user_name' not in st.session_state:
     st.session_state['user_name'] = None
 
-
-if not st.session_state['tokens']['access_token']:
+if 'tokens' not in st.session_state:
+# if not st.session_state['tokens']['access_token']:
     st.warning("Please sign in at Home page to use the app")
 
 if st.session_state['tokens']['access_token']:
