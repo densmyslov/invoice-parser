@@ -134,7 +134,12 @@ else:
                         st.session_state['user_number'] = randint(0,10000)
 
                         if access_token and refresh_token and id_token:
-                            st.session_state['tokens'] = {'access_token': access_token, 'refresh_token': refresh_token, 'id_token': id_token, 'last_refresh': time.time()}
+                            st.session_state['tokens'] = {'access_token': (access_token,
+                                                                           st.session_state.user_name), 
+                                                                           'refresh_token': refresh_token, 
+                                                                           'id_token': id_token, 
+                                                                           'last_refresh': time.time()}
+                            
                             st.rerun()
                         else:
                             st.error("Login failed.")
