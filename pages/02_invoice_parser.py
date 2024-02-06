@@ -43,6 +43,8 @@ if 'tokens' not in st.session_state:
 
 if st.session_state['tokens']['access_token']:
     st.sidebar.write(f"Signed in as {st.session_state.user_email}")
+    access_token = st.session_state['tokens']['access_token']
+    customer_id = st.session_state[access_token]
 
 
     s3_client = utils.s3_client_BRG
@@ -85,7 +87,7 @@ if st.session_state['tokens']['access_token']:
     if st.sidebar.button("Refresh"):
         st.session_state['counter'] +=1
         st.rerun()
-    st.sidebar.write(st.session_state['tokens']['access_token'][1])
+    st.sidebar.write(customer_id)
 
 
 
@@ -109,12 +111,12 @@ if st.session_state['tokens']['access_token']:
                                key = 'zip_tags')
         ts = datetime.now().strftime("%Y-%m-%d")
         metadata = {'tags':tags,
-                    'customer_id': st.session_state['tokens']['access_token'][1]}
+                    'customer_id': customer_id}
         if uploaded_zip_file:
         
             if st.button(":green[Upload zipped invoices to your cloud account]",on_click=counter_up):
                 file_uid= uuid.uuid4().hex
-                customer_id = st.session_state['tokens']['access_token'][1]
+                
                 key = f"accounts/{customer_id}/zip/{file_uid}/zipped_pdfs_v1.zip"
                 zip_buffer = BytesIO(uploaded_zip_file.read())
                 s3_client.put_object(Bucket=BUCKET, 
@@ -140,7 +142,7 @@ if st.session_state['tokens']['access_token']:
                         key = 'pdf_tags')
         ts = datetime.now().strftime("%Y-%m-%d")
         metadata = {'tags':tags,
-                    'customer_id': st.session_state['tokens']['access_token'][1]}
+                    'customer_id': customer_id}
         def create_zip(uploaded_files):
             # In-memory buffer to store the zip file
             zip_buffer = BytesIO()
@@ -165,7 +167,7 @@ if st.session_state['tokens']['access_token']:
 
                 file_uid= uuid.uuid4().hex
 
-                key = f"accounts/{st.session_state['tokens']['access_token'][1]}/zip/{file_uid}/zipped_pdfs_v1.zip"
+                key = f"accounts/{customer_id}/zip/{file_uid}/zipped_pdfs_v1.zip"
 
                 s3_client.put_object(Bucket=BUCKET, 
                                         Key=key, 
@@ -214,7 +216,7 @@ if st.session_state['tokens']['access_token']:
                 st.write(file_uids)
 
                 for file_uid in file_uids:
-                    prefix = f"accounts/{st.session_state['tokens']['access_token'][1]}/"
+                    prefix = f"accounts/{customer_id}/"
                     latest_ts, keys_to_delete = utils.get_latest_keys_from_(s3_client,
                                                             BUCKET, 
                                                             prefix, 
@@ -225,7 +227,7 @@ if st.session_state['tokens']['access_token']:
                     for key in keys_to_delete:
                         s3_client.delete_object(Bucket=bucket, Key=key)
                 invoices_df = invoices_df[~invoices_df.index.isin(selection.index)]
-                key = f"accounts/{st.session_state['tokens']['access_token'][1]}/invoices_df.parquet"
+                key = f"accounts/{customer_id}/invoices_df.parquet"
                 utils.pd_save_parquet(s3_client, invoices_df, bucket, key)
                 st.success("Invoices deleted")
                 st.session_state['counter'] += 1
@@ -252,7 +254,7 @@ if st.session_state['tokens']['access_token']:
                     st.dataframe(df_to_show)
                     # df_to_show['gpt_response'] = None
                     for row in df_to_show.itertuples():
-                        prefix = f"accounts/{st.session_state['tokens']['access_token'][1]}/images/{row.file_uid}/page"
+                        prefix = f"accounts/{customer_id}/images/{row.file_uid}/page"
                         # st.write(prefix)
                         page_keys_zip = utils.get_latest_keys_from_(s3_client,
                                                             bucket, 
@@ -348,14 +350,14 @@ if st.session_state['tokens']['access_token']:
                     for row in invoices_df.loc[selection.index].itertuples():
 
                         json_for_parsing_invoices.append({'file_uid': row.file_uid,
-                                                            'customer_id': st.session_state['tokens']['access_token'][1]
+                                                            'customer_id': customer_id
                                                             })
 
 
                         st.write(row.file_name)
 
                     for key_end in ['invoices_to_pdfplumber']:
-                        key = f"accounts/{st.session_state['tokens']['access_token'][1]}/parsing/{key_end}.json"
+                        key = f"accounts/{customer_id}/parsing/{key_end}.json"
                         s3_client.put_object(
                             Bucket=BUCKET,
                             Key=key,
