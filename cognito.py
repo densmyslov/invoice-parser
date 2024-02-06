@@ -1,3 +1,4 @@
+
 from botocore.exceptions import ClientError
 import hmac
 import hashlib
@@ -7,10 +8,11 @@ import uuid
 
 logger = logging.getLogger(__name__)
 
+
 class CognitoIdentityProviderWrapper:
     """Encapsulates Amazon Cognito actions"""
 
-    def __init__(self, cognito_idp_client, user_pool_id, client_id, client_secret=None, access_token=None):
+    def __init__(self, cognito_idp_client, user_pool_id, client_id, client_secret=None):
         """
         :param cognito_idp_client: A Boto3 Amazon Cognito Identity Provider client.
         :param user_pool_id: The ID of an existing Amazon Cognito user pool.
@@ -21,7 +23,6 @@ class CognitoIdentityProviderWrapper:
         self.user_pool_id = user_pool_id
         self.client_id = client_id
         self.client_secret = client_secret
-        self.access_token = access_token
 
     def _secret_hash(self, username):
         """Computes the secret hash value required by certain Amazon Cognito API calls"""
@@ -30,63 +31,56 @@ class CognitoIdentityProviderWrapper:
         dig = hmac.new(secret, message, hashlib.sha256).digest()
         return base64.b64encode(dig).decode()
 
-    def sign_out(self):
-        """Signs out the user"""
-        response = self.cognito_idp_client.global_sign_out(
-            AccessToken=self.access_token,
-            ClientId=self.client_id
-        )
-        return response
+    def sign_up_user(self, given_name, family_name, email, password):
+      """
+      Signs up a new user with Amazon Cognito. This action prompts Amazon Cognito
+      to send an email to the specified email address. The email contains a code that
+      can be used to confirm the user.
 
-    def sign_up_user(self, given_name=None, family_name=None, email=None, password=None):
-        """
-        Signs up a new user with Amazon Cognito. This action prompts Amazon Cognito
-        to send an email to the specified email address. The email contains a code that
-        can be used to confirm the user.
+      When the user already exists, the user status is checked to determine whether
+      the user has been confirmed.
 
-        When the user already exists, the user status is checked to determine whether
-        the user has been confirmed.
-
-        :param given_name: The first name of the new user.
-        :param family_name: The last name of the new user.
-        :param email: The email address of the new user.
-        :param password: The password for the new user.
-        :return: True when the user is already confirmed with Amazon Cognito.
-                Otherwise, false.
-        """
-        try:
-            username = str(uuid.uuid4())  # Generate a random UUID as the user name
-            kwargs = {
-                'ClientId': self.client_id,
-                'Username': username,
-                'Password': password,
-                'UserAttributes': [
-                    {'Name': 'given_name', 'Value': given_name},
-                    {'Name': 'family_name', 'Value': family_name},
-                    {'Name': 'email', 'Value': email},
-                    # {'Name': 'locale','Value': 'en_US'}
-                ]
-            }
-            if self.client_secret is not None:
-                kwargs['SecretHash'] = self._secret_hash(username)
-            response = self.cognito_idp_client.sign_up(**kwargs)
-            # confirmed = response['UserConfirmed']
-            confirmed = username
-        except ClientError as err:
-            if err.response['Error']['Code'] == 'UsernameExistsException':
-                response = self.cognito_idp_client.admin_get_user(
-                    UserPoolId=self.user_pool_id, Username=username)
-                logger.warning("User %s exists and is %s.", username, response['UserStatus'])
-                confirmed = response['UserStatus'] == 'CONFIRMED'
-            else:
-                logger.error(
-                    "Couldn't sign up %s. Here's why: %s: %s", email,
-                    err.response['Error']['Code'], err.response['Error']['Message'])
-                raise
-        return confirmed
+      :param given_name: The first name of the new user.
+      :param family_name: The last name of the new user.
+      :param email: The email address of the new user.
+      :param locale: The locale of the new user.
+      :param password: The password for the new user.
+      :return: True when the user is already confirmed with Amazon Cognito.
+              Otherwise, false.
+      """
+      try:
+          username = str(uuid.uuid4())  # Generate a random UUID as the user name
+          kwargs = {
+              'ClientId': self.client_id,
+              'Username': username,
+              'Password': password,
+              'UserAttributes': [
+                  {'Name': 'given_name', 'Value': given_name},
+                  {'Name': 'family_name', 'Value': family_name},
+                  {'Name': 'email', 'Value': email}
+                #   {'Name': 'locale', 'Value': locale}
+              ]
+          }
+          if self.client_secret is not None:
+              kwargs['SecretHash'] = self._secret_hash(username)
+          response = self.cognito_idp_client.sign_up(**kwargs)
+          # confirmed = response['UserConfirmed']
+          confirmed = username
+      except ClientError as err:
+          if err.response['Error']['Code'] == 'UsernameExistsException':
+              response = self.cognito_idp_client.admin_get_user(
+                  UserPoolId=self.user_pool_id, Username=username)
+              logger.warning("User %s exists and is %s.", username, response['UserStatus'])
+              confirmed = response['UserStatus'] == 'CONFIRMED'
+          else:
+              logger.error(
+                  "Couldn't sign up %s. Here's why: %s: %s", email,
+                  err.response['Error']['Code'], err.response['Error']['Message'])
+              raise
+      return confirmed
 
 
-    def confirm_user_sign_up(self, user_name, user_email, confirmation_code):
+    def confirm_user_sign_up(self, user_name, confirmation_code):
         """
         Confirms a previously created user. A user must be confirmed before they
         can sign in to Amazon Cognito.
@@ -110,7 +104,6 @@ class CognitoIdentityProviderWrapper:
             raise
         else:
             return True
-
 
     def resend_confirmation(self, user_name):
         """
@@ -178,9 +171,14 @@ class CognitoIdentityProviderWrapper:
                 "Couldn't authenticate user %s. Here's why: %s: %s", email,
                 err.response['Error']['Code'], err.response['Error']['Message'])
             raise
-        return response
+        result = response['AuthenticationResult']
+        access_token = result['AccessToken']
+        refresh_token = result['RefreshToken']
+        id_token = result['IdToken']
 
-    def initiate_forgot_password(self, email):
+        return access_token, refresh_token, id_token
+
+    def forgot_password(self, email):
         """
         Initiates a forgotten password flow for a user in a user pool.
 
@@ -231,30 +229,6 @@ class CognitoIdentityProviderWrapper:
             raise Exception('User not found') from e
         except Exception as e:
             raise e
-        
-    def delete_user_account_with_token(self, access_token):
-        """
-        Deletes a user account from the Amazon Cognito user pool using their access token.
-        This method accepts an access_token as an argument and calls the delete_user method to delete the user account 
-        from the specified user pool. The delete_user method requires the user's access token, 
-        which should be obtained after the user has successfully authenticated.
-
-        :param access_token: The user's access token.
-        :return: None
-        """
-        try:
-            response = self.cognito_idp_client.delete_user(
-                AccessToken=access_token
-            )
-            print(f'User account deleted:', response)
-            
-        except ClientError as e:
-            print(f'Error deleting user account:', e)
-            raise
-
-
-
-
 
 
 

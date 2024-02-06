@@ -146,8 +146,7 @@ if st.session_state.sign_up_state == "email_confirmation_required":
         verification_code = st.text_input("Confirmation code")
         if st.form_submit_button(label=tl.submit_button_label[selected_language]):
             # try:
-                r = cognito_service.confirm_user_sign_up(st.session_state.user_name, 
-                                                            st.session_state.user_email, 
+                r = cognito_service.confirm_user_sign_up(st.session_state.user_name,  
                                                             verification_code)
                 if r:
                     st.session_state.sign_up_state = "email_confirmed"

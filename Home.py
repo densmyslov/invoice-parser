@@ -6,10 +6,11 @@ import boto3
 import cognito
 import streamlit as st
 import text_labels as tl
-# import locale_options
-import re
+import time
+# import re
 import utils
 from botocore.exceptions import ClientError
+from random import randint
 
 st.title("Home page")
 
@@ -46,50 +47,65 @@ dynamodb_client = boto3.client('dynamodb',
                         aws_access_key_id = AWS_ACCESS_KEY_ID,
                         aws_secret_access_key = AWS_SECRET_KEY)
 
-languages = {
-    "🇺🇸": "us",
-    "🇨🇳":"cn",
-    "🇪🇸":'es',
-    "🇫🇷": "fr",
-}
-if 'selected_language' not in st.session_state:
-    st.session_state.selected_language = "us"
-# selected_language = st.session_state.selected_language
+# languages = {
+#     "🇺🇸": "us",
+#     "🇨🇳":"cn",
+#     "🇪🇸":'es',
+#     "🇫🇷": "fr",
+# }
+# if 'selected_language' not in st.session_state:
+#     st.session_state.selected_language = "us"
+# # selected_language = st.session_state.selected_language
 
-@st.cache_data
-def get_language_idx_from_(selected_language):
-    return list(languages.values()).index(selected_language)
+# @st.cache_data
+# def get_language_idx_from_(selected_language):
+#     return list(languages.values()).index(selected_language)
 
-idx = get_language_idx_from_(st.session_state.selected_language)
+# idx = get_language_idx_from_(st.session_state.selected_language)
 
 # selected_language = st.sidebar.radio("Select your language", 
 #                                             ("🇺🇸","🇨🇳","🇪🇸","🇫🇷"),
 #                                             index=idx)
 # st.session_state.selected_language = languages[selected_language]
 
-st.header("You can sign in to your account here")
+st.header("Please sign in to your account here")
+
+if 'tokens' not in st.session_state:
+    st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
 
 if 'sign_in_state' not in st.session_state:
     st.session_state.sign_in_state = None
-if 'access_token' not in st.session_state:
-    st.session_state.access_token = None
-if 'refresh_token' not in st.session_state:
-    st.session_state.refresh_token = None
-if 'id_token' not in st.session_state:
-    st.session_state.id_token = None
-if 'email' not in st.session_state:
-    st.session_state.user_email = None
-if 'user_name' not in st.session_state:
-    st.session_state.user_name = None
+# if 'access_token' not in st.session_state:
+#     st.session_state.access_token = None
+# if 'refresh_token' not in st.session_state:
+#     st.session_state.refresh_token = None
+# if 'id_token' not in st.session_state:
+#     st.session_state.id_token = None
+# if 'email' not in st.session_state:
+#     st.session_state.user_email = None
+# if 'user_name' not in st.session_state:
+#     st.session_state.user_name = None
 if 'delete_account' not in st.session_state:
     st.session_state.delete_account = False
 
-if st.session_state.user_email:
-    st.write(f"You are signed in as {st.session_state.user_email}")
-    st.write(f"Your user name is {st.session_state.user_name}")
+# if st.session_state.user_email:
+#     st.write(f"You are signed in as {st.session_state.user_email}")
+#     st.write(f"Your user name is {st.session_state.user_name}")
+    
+if st.session_state['tokens']['access_token']:
+    # Refresh token if it's been more than 55 minutes since the last refresh
+    if time.time() - st.session_state['tokens']['last_refresh'] > 3300:
+        # st.session_state['tokens']['access_token'] = refresh_access_token(st.session_state['tokens']['refresh_token'])
+        # st.session_state['tokens']['last_refresh'] = time.time()
+        st.write("Your session has expired. Please sign in again.")
+
+    st.write("Welcome! You're logged in.")
+
+    if st.button('Logout'):
+        st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
+        st.rerun()
 
 else:
-
 
     with st.form(key='sign_in_form'):
 
@@ -97,73 +113,51 @@ else:
         st.session_state.password = st.text_input("password", 
                                 type='password')
 
-        submit_button = st.form_submit_button(label="sign-in")
-        
-        if submit_button:
-            st.session_state.user_name = None
-            st.session_state.sign_up_state = None
-            # st.session_state.user_email = None
-            # st.session_state.password = None
-            st.session_state.user_given_name = None
-            st.session_state.user_family_name = None
-            st.session_state.delete_account = False
-
-            # retrieves user's record from dynamodb CUSTOMERS_TABLE_NAME
-            # from user's record, retrieves email_status, user_name
-            # if email_status is CONFIRMED, then sign in user
-            # if email_status is not CONFIRMED, then ask user to confirm email
+        if st.form_submit_button(label="sign-in"):
 
             r = utils.get_dynamodb_table_record_from_(dynamodb_client,
-                                                        CUSTOMERS_TABLE_NAME,
-                                                        st.session_state.user_email
-                                                    )
-            # st.write(r)
-
+                                            CUSTOMERS_TABLE_NAME,
+                                            st.session_state.user_email
+                                        )
+            
             if r:
+
                 email_status=r[0]['email_status']['S']
                 st.session_state.user_name = r[0]['user_id']['S']
                 if email_status =='CONFIRMED':
-                
+
                     try:
-                        r = cognito_service.sign_in_user(st.session_state.user_email,
-                                                        st.session_state.password)
 
-                        result = r['AuthenticationResult']
-                        st.session_state.sign_in_state = 1
-                        # st.session_state.access_token = result['AccessToken']
-                        # st.session_state.refresh_token = result['RefreshToken']
-                        # st.session_state.id_token = result['IdToken']
-                        
-                        # st.session_state.email = email
-                        st.success(f"You are signed in as {st.session_state.user_email}")
-                        st.write(f"Your user name is {st.session_state.user_name}")
+                        access_token, refresh_token, id_token = cognito_service.sign_in_user(st.session_state.user_email, 
+                                                                                                st.session_state.password)
 
+                        st.session_state['user_number'] = randint(0,10000)
+
+                        if access_token and refresh_token and id_token:
+                            st.session_state['tokens'] = {'access_token': access_token, 'refresh_token': refresh_token, 'id_token': id_token, 'last_refresh': time.time()}
+                            st.rerun()
+                        else:
+                            st.error("Login failed.")
                     
-
-
-
-                    except :
-                        # st.write('cognito failure to sign in')
-                        st.error("wrong password")
-                        st.rerun()
+                    except:
+                            st.error("wrong password")
+                            st.rerun()
                 else:
-                    st.session_state.user_name = r[0]['user_id']['S']
-                    st.write("Please confirm your email address")
-                    st.session_state.sign_in_state = 'email_confirmation_required'
-
+                        
+                        st.write("Please confirm your email address")
+                        st.session_state.sign_in_state = 'email_confirmation_required'
             else:
                 st.error("Your password or email is incorrect")
-                # st.error(tl.account_setup_dict['email_not_exists_error_0'][st.session_state.selected_language])
-                # st.error(tl.account_setup_dict['email_not_exists_error_1'][st.session_state.selected_language])
-                # st.error(tl.account_setup_dict['email_not_exists_error_2'][st.session_state.selected_language])
-
-                # st.markdown('<a href="/my_account" target="_self">my_account</a>', unsafe_allow_html=True)
-                # st.markdown('<a href="/sign-up" target="_self">sign-up</a>', unsafe_allow_html=True)
-                st.session_state.sign_in_state = 0
-                st.session_state.user_email=None
-                st.session_state.password=None
+                st.rerun()
                 st.stop()
-            st.rerun()
+                # st.rerun()   
+
+
+
+# if st.session_state['tokens']['access_token']:
+#     st.write("Welcome! You're logged in.")
+#     st.write(f"You are signed in as {st.session_state.user_email}")
+#     st.session_state['user_number']
 
 if st.session_state.sign_in_state == 'email_confirmation_required':
     st.write("Please confirm your email")
@@ -201,7 +195,7 @@ if st.session_state.sign_in_state == 'email_confirmation_required':
 #     st.sidebar.write(f"You are signed in as {st.session_state.email}")
 
 # st.write(st.session_state.user_name)
-if st.session_state.user_email:
+if st.session_state['tokens']['access_token']:
     
     if st.button(":red[Delete account]"):
         st.session_state.delete_account=True
@@ -250,18 +244,20 @@ if st.session_state.delete_account:
                         print(f"Deleting object {obj['Key']}...")
                         utils.s3_client_BRG.delete_object(Bucket=bucket_name, Key=obj['Key'])
 
-            st.session_state.user_name = None
-            st.session_state.sign_up_state = None
-            st.session_state.user_email = None
-            st.session_state.password = None
-            st.session_state.user_given_name = None
-            st.session_state.user_family_name = None
+            st.session_state['tokens']['access_token'] = None
+            st.session_state['tokens']['refresh_token'] = None
+            st.session_state['tokens']['id_token'] = None
+            # st.session_state.sign_up_state = None
+            # st.session_state.user_email = None
+            # st.session_state.password = None
+            # st.session_state.user_given_name = None
+            # st.session_state.user_family_name = None
             st.session_state.delete_account = False
    
             st.rerun()
 
 
-if st.session_state.user_email:
+if st.session_state['tokens']['access_token']:
     st.sidebar.write(f"You are signed in as {st.session_state.user_email}")
 else:
     st.sidebar.write("You are not signed in")
