@@ -183,6 +183,9 @@ with tab2:
         default_cols = ['file_name','file_uid','is_parsed',
                         'total_sum_check','line_items_sum_check','model',
                         'time_to_complete','source','completion']
+        default_cols = ['file_name','file_uid','is_parsed',
+                    'total_sum_check','line_items_sum_check',
+                    'time_to_complete']
         selection = utils.dataframe_with_selections(invoices_df0[default_cols])
         # selection = utils.dataframe_with_selections(invoices_df)
     
