@@ -356,7 +356,7 @@ with tab2:
                         Key=key,
                         Body = json.dumps(json_for_parsing_invoices)
                     )
-                    st.write(key)
+                    # st.write(key)
                 st.write(f"Sent for parsing. Click on 'Refresh' to see the results. It may take up to 5 minutes for results to appear")
 
 
