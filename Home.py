@@ -47,26 +47,7 @@ dynamodb_client = boto3.client('dynamodb',
                         aws_access_key_id = AWS_ACCESS_KEY_ID,
                         aws_secret_access_key = AWS_SECRET_KEY)
 
-# languages = {
-#     "🇺🇸": "us",
-#     "🇨🇳":"cn",
-#     "🇪🇸":'es',
-#     "🇫🇷": "fr",
-# }
-# if 'selected_language' not in st.session_state:
-#     st.session_state.selected_language = "us"
-# # selected_language = st.session_state.selected_language
 
-# @st.cache_data
-# def get_language_idx_from_(selected_language):
-#     return list(languages.values()).index(selected_language)
-
-# idx = get_language_idx_from_(st.session_state.selected_language)
-
-# selected_language = st.sidebar.radio("Select your language", 
-#                                             ("🇺🇸","🇨🇳","🇪🇸","🇫🇷"),
-#                                             index=idx)
-# st.session_state.selected_language = languages[selected_language]
 
 st.header("Please sign in to your account here")
 
@@ -75,24 +56,13 @@ if 'tokens' not in st.session_state:
 
 if 'sign_in_state' not in st.session_state:
     st.session_state.sign_in_state = None
-# if 'access_token' not in st.session_state:
-#     st.session_state.access_token = None
-# if 'refresh_token' not in st.session_state:
-#     st.session_state.refresh_token = None
-# if 'id_token' not in st.session_state:
-#     st.session_state.id_token = None
-# if 'email' not in st.session_state:
-#     st.session_state.user_email = None
-# if 'user_name' not in st.session_state:
-#     st.session_state.user_name = None
+
 if 'delete_account' not in st.session_state:
     st.session_state.delete_account = False
 
-# if st.session_state.user_email:
-#     st.write(f"You are signed in as {st.session_state.user_email}")
-#     st.write(f"Your user name is {st.session_state.user_name}")
+
     
-if st.session_state['tokens']['access_token']:
+if 'tokens' in st.session_state and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None:
     # Refresh token if it's been more than 55 minutes since the last refresh
     # if time.time() - st.session_state['tokens']['last_refresh'] > 3300:
     #     # st.session_state['tokens']['access_token'] = refresh_access_token(st.session_state['tokens']['refresh_token'])
@@ -100,9 +70,13 @@ if st.session_state['tokens']['access_token']:
     #     st.write("Your session has expired. Please sign in again.")
 
     st.write("Welcome! You're logged in.")
-
+    # st.write(list(st.session_state.keys()))
     if st.button('Logout'):
-        st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
+        # st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
+        # st.session_state['tokens'] = None
+        for key in st.session_state.keys():
+            st.write(key)
+            del st.session_state[key]
         st.rerun()
 
 else:
@@ -160,11 +134,6 @@ else:
 
 
 
-# if st.session_state['tokens']['access_token']:
-#     st.write("Welcome! You're logged in.")
-#     st.write(f"You are signed in as {st.session_state.user_email}")
-#     st.session_state['user_number']
-
 if st.session_state.sign_in_state == 'email_confirmation_required':
     st.write("Please confirm your email")
     if st.button("Send confirmation code"):
@@ -201,7 +170,7 @@ if st.session_state.sign_in_state == 'email_confirmation_required':
 #     st.sidebar.write(f"You are signed in as {st.session_state.email}")
 
 # st.write(st.session_state.user_name)
-if st.session_state['tokens']['access_token']:
+if st.session_state['tokens'] and 'access_token' in st.session_state['tokens']:
     
     if st.button(":red[Delete account]"):
         st.session_state.delete_account=True
@@ -263,7 +232,7 @@ if st.session_state.delete_account:
             st.rerun()
 
 
-if st.session_state['tokens']['access_token']: 
+if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None: 
     access_token = st.session_state['tokens']['access_token']
     customer_id = st.session_state[access_token]['customer_id']
     user_email = st.session_state[st.session_state['tokens']['access_token']]['user_email']
