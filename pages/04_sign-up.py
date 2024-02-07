@@ -51,11 +51,11 @@ dynamodb_client = boto3.client('dynamodb',
                         aws_secret_access_key = AWS_SECRET_KEY)
 
 
-# SET LANGUAGE
-if 'selected_language' not in st.session_state:
-    st.session_state.selected_language = "us"
-if 'user_name' not in st.session_state:
-    st.session_state.user_name = None
+# # SET LANGUAGE
+# if 'selected_language' not in st.session_state:
+#     st.session_state.selected_language = "us"
+# if 'user_name' not in st.session_state:
+#     st.session_state.user_name = None
 if 'sign_up_state' not in st.session_state:
     st.session_state.sign_up_state = None
 if 'email' not in st.session_state:
@@ -68,24 +68,25 @@ if 'user_family_name' not in st.session_state:
     st.session_state.user_family_name = None
 
 
-selected_language = st.session_state.selected_language
+# selected_language = st.session_state.selected_language
 
 # SIGN UP FORM
 
 # user_locale = locale_options.country_locale_options[st.selectbox(tl.account_setup_dict['sign_up_form_0'][selected_language], list(locale_options.country_locale_options.keys()))]
-tl.account_setup_dict['sign_up_form_0'][selected_language]
+# tl.account_setup_dict['sign_up_form_0'][selected_language]
+st.write("Please fill out the form below to sign up for a new account:")
 with st.form('sign_up_form'):
     # email
-    st.session_state.user_email = st.text_input(tl.account_setup_dict['sign_up_form_1'][selected_language])
+    st.session_state.user_email = st.text_input("email address")
 
     # password
-    st.caption(tl.account_setup_dict['password_specs_0'][selected_language])
-    st.caption(tl.account_setup_dict['password_specs_1'][selected_language])
-    st.caption(tl.account_setup_dict['password_specs_2'][selected_language])
-    st.caption(tl.account_setup_dict['password_specs_3'][selected_language])
-    st.caption(tl.account_setup_dict['password_specs_4'][selected_language])
-    st.caption(tl.account_setup_dict['password_specs_5'][selected_language])
-    st.session_state.password = st.text_input(tl.account_setup_dict['sign_up_form_2'][selected_language], type='password')
+    st.caption("Your password must meet the following requirements:")
+    st.caption("1. At least 8 characters in length.")
+    st.caption("2. At least one uppercase letter.")
+    st.caption("3. At least one lowercase letter.")
+    st.caption("4. At least one number.")
+    st.caption("5. At least one special character.")
+    st.session_state.password = st.text_input("password", type='password')
 
     # given_name
     # st.session_state.user_given_name = st.text_input(tl.account_setup_dict['sign_up_form_3'][selected_language])
@@ -97,7 +98,7 @@ with st.form('sign_up_form'):
 
     
 
-    if st.form_submit_button(label=tl.submit_button_label[selected_language]): # "Submit"
+    if st.form_submit_button("Submit"): # "Submit"
         # CHECK IF USER EXISTS IN DYNAMO DB TABLE
         # if user exists, then sign_up_state = 2
         # next options: sign in, forgot password, resend confirmation code
@@ -105,7 +106,7 @@ with st.form('sign_up_form'):
                                 CUSTOMERS_TABLE_NAME,  
                                 st.session_state.user_email)
         
-        # st.write(email_exists)
+        st.error("Account with this email address already exists. Please sign in or reset your password.")
         if email_exists:
             st.session_state.sign_up_state = 2
 

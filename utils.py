@@ -111,6 +111,8 @@ def delete_record(
         print(f'Error deleting record: {e}')
         raise
 
+
+
 def download_image(s3_client,bucket, key):
     # Use the S3 client to download the file
     
@@ -533,6 +535,9 @@ def load_invoice_df(_s3_client, customer_id, counter=None):
     key = f"accounts/{customer_id}/invoices_df.parquet"
     try:
         invoice_df = pd_read_parquet(_s3_client, bucket, key)
+        invoice_df['search_str'] = invoice_df.apply(lambda x:
+                                                    f"{x['file_name']}{x['file_uid']}{x['completion']}",
+                                                    axis=1)
     except:
         invoice_df = pd.DataFrame()
     return invoice_df
@@ -563,6 +568,21 @@ def password_is_valid(password):
         return False
 
     return True
+
+def to_excel(df1, df2):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df1.to_excel(writer, index=False, sheet_name='Summary')
+    df2.to_excel(writer, index=False, sheet_name='Line Items')
+    workbook = writer.book
+    worksheet1 = writer.sheets['Summary']
+    worksheet2 = writer.sheets['Line Items']
+    # format1 = workbook.add_format({'num_format': '0.00'})
+    # worksheet1.set_column('A:A', None, format1)
+    # worksheet2.set_column('A:A', None, format1)
+    writer.close()
+    processed_data = output.getvalue()
+    return processed_data
 
 
 @st.cache_data()

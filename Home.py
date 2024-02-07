@@ -94,10 +94,10 @@ if 'delete_account' not in st.session_state:
     
 if st.session_state['tokens']['access_token']:
     # Refresh token if it's been more than 55 minutes since the last refresh
-    if time.time() - st.session_state['tokens']['last_refresh'] > 3300:
-        # st.session_state['tokens']['access_token'] = refresh_access_token(st.session_state['tokens']['refresh_token'])
-        # st.session_state['tokens']['last_refresh'] = time.time()
-        st.write("Your session has expired. Please sign in again.")
+    # if time.time() - st.session_state['tokens']['last_refresh'] > 3300:
+    #     # st.session_state['tokens']['access_token'] = refresh_access_token(st.session_state['tokens']['refresh_token'])
+    #     # st.session_state['tokens']['last_refresh'] = time.time()
+    #     st.write("Your session has expired. Please sign in again.")
 
     st.write("Welcome! You're logged in.")
 

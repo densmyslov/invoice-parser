@@ -99,10 +99,10 @@ with tab1:
                                     Key=key, 
                                     Body=zip_buffer.getvalue(),
                                     Metadata = metadata)
-            st.write(f"put object to {key}")
 
 
-            # zip_buffer.seek(0)
+
+            zip_buffer.seek(0)
             st.session_state.upload_zip_key = str(randint(0, 100000))
             st.write(":orange[Your invoices have been uploaded to your cloud account]")  
             sleep(5) 
@@ -171,13 +171,19 @@ with tab2:
     invoices_df = utils.load_invoice_df(s3_client,
                                         st.session_state[access_token]['customer_id'],
                                         counter = st.session_state['counter'])
+    
     if invoices_df.empty:
         st.error("You have no invoices in your account")
     else:
-        default_cols = ['file_name','file_uid','is_parsed','model',
-                        'total_sum_check','line_items_sum_check','time_to_complete',
-                        'source','completion']
-        selection = utils.dataframe_with_selections(invoices_df)
+        invoices_df0 = invoices_df.copy()
+        q = st.sidebar.text_input("Search for invoice")
+        if q:
+            invoices_df0 = invoices_df0.query("search_str.str.contains(@q, case=False)")
+        
+        default_cols = ['file_name','file_uid','is_parsed',
+                        'total_sum_check','line_items_sum_check','model',
+                        'time_to_complete','source','completion']
+        selection = utils.dataframe_with_selections(invoices_df0[default_cols])
         # selection = utils.dataframe_with_selections(invoices_df)
     
     #===========================INVOICE PROCESSING====================================
@@ -215,6 +221,8 @@ with tab2:
             st.session_state['counter'] += 1
             st.rerun()
         #----------------------SHOW INVOICES
+        
+
 
         if col2.button("Show selected invoices"):
             if selection.empty:
