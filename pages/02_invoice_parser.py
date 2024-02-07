@@ -52,7 +52,7 @@ def get_random_value():
     st.session_state['upload_zip_key'] = randint(0,100000)
 
 def counter_up():
-    st.session_state['counter'] += 1
+    st.session_state['counter'] = randint(0,10000000)
     st.rerun()
 
 if st.sidebar.button("Refresh"):
@@ -224,7 +224,7 @@ with tab2:
             utils.pd_save_parquet(s3_client, invoices_df, bucket, key)
             st.success("Invoices deleted")
             st.session_state['counter'] += 1
-            st.rerun()
+            counter_up()
         #----------------------SHOW INVOICES
         
 
