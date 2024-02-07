@@ -200,7 +200,7 @@ if st.session_state.delete_account:
             )
 
             # Delete user folder and its objects in s3
-            bucket_name = 'bergena-invoice-parser'
+            bucket_name = 'bergena-invoice-parser-prod'
             prefix = f"accounts/{st.session_state.customer_id}"
 
             # # First, delete all objects in the bucket

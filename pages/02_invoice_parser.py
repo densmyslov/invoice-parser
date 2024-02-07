@@ -204,27 +204,37 @@ with tab2:
             if selection.empty:
                 st.error("You have not selected any invoices")
                 st.stop()
-            st.write(selection.index)
+            # st.write(selection.index)
+            file_names = invoices_df.loc[selection.index,'file_name'].tolist()
             file_uids = invoices_df.loc[selection.index,'file_uid'].tolist()
-            st.write(file_uids)
+            
+            st.write(file_names)
+            
+            keys_to_delete = []
 
+            
             for file_uid in file_uids:
                 prefix = f"accounts/{customer_id}/"
-                latest_ts, keys_to_delete = utils.get_latest_keys_from_(s3_client,
+                latest_ts, keys_to_delete0 = utils.get_latest_keys_from_(s3_client,
                                                         BUCKET, 
                                                         prefix, 
                                                         time_interval=360, 
                                                         time_unit='day', 
                                                         additional_str=file_uid,
                                                         zipped=False)
+                keys_to_delete.extend(keys_to_delete0)
+            st.error("Are you sure you want to delete the following invoices?")
+            st.write(keys_to_delete)
+            if st.button("Yes, delete"):
                 for key in keys_to_delete:
+                    st.write(f"deleting {key}")
+            
                     s3_client.delete_object(Bucket=bucket, Key=key)
             invoices_df = invoices_df[~invoices_df.index.isin(selection.index)]
             key = f"accounts/{customer_id}/invoices_df.parquet"
             utils.pd_save_parquet(s3_client, invoices_df, bucket, key)
             st.success("Invoices deleted")
-            st.session_state['counter'] += 1
-            counter_up()
+            # counter_up()
         #----------------------SHOW INVOICES
         
 
