@@ -156,24 +156,27 @@ if st.session_state.sign_up_state == "email_confirmation_required":
                     st.session_state.sign_in_state = None
                     # st.rerun()
                     st.success("Success ! Your account has been activated")
+                else:
+                    st.write("Code incorrect")
             except:
                 st.error("Error confirming email address")
 
-    st.write("Code incorrect")
-    # st.session_state.sign_up_state=None
-    if st.button('Resend confirmation code'):
-        try:
-            r = cognito_service.resend_confirmation(st.session_state.customer_id)
-            # st.session_state.user_name = None
-            # st.session_state.sign_up_state = None
-            # st.session_state.user_email = None
-            # st.session_state.password = None
-            # st.session_state.user_given_name = None
-            # st.session_state.user_family_name = None
+                 
+    
+    if 'sign_up_state' in  st.session_state and st.session_state.sign_up_state == "email_confirmation_required":
+        if st.button('Resend confirmation code'):
+            try:
+                r = cognito_service.resend_confirmation(st.session_state.customer_id)
+                # st.session_state.user_name = None
+                # st.session_state.sign_up_state = None
+                # st.session_state.user_email = None
+                # st.session_state.password = None
+                # st.session_state.user_given_name = None
+                # st.session_state.user_family_name = None
 
-        except ClientError as e:
-            st.error(f"Error: {e.response['Error']['Message']}")
-            st.session_state.sign_up_state = "email_confirmation_required"
+            except ClientError as e:
+                st.error(f"Error: {e.response['Error']['Message']}")
+                st.session_state.sign_up_state = "email_confirmation_required"
 
 # st.write(st.session_state.sign_up_state)
 

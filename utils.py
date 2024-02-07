@@ -35,7 +35,7 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
 
 CUSTOMERS_TABLE_NAME = os.environ.get('CUSTOMERS_TABLE_NAME')
-SELLER_BUCKET = os.environ.get('SELLER_BUCKET')
+BUCKET = 'bergena-invoice-parser-prod'
 
 OPENAI_KEY = os.environ.get('OPENAI_KEY')
 

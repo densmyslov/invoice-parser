@@ -229,12 +229,13 @@ with tab2:
                 for key in keys_to_delete:
                     st.write(f"deleting {key}")
             
-                    s3_client.delete_object(Bucket=bucket, Key=key)
-            invoices_df = invoices_df[~invoices_df.index.isin(selection.index)]
-            key = f"accounts/{customer_id}/invoices_df.parquet"
-            utils.pd_save_parquet(s3_client, invoices_df, bucket, key)
-            st.success("Invoices deleted")
-            # counter_up()
+                    s3_client.delete_object(Bucket=BUCKET, Key=key)
+                invoices_df = invoices_df[~invoices_df.index.isin(selection.index)]
+                key = f"accounts/{customer_id}/invoices_df.parquet"
+                utils.pd_save_parquet(s3_client, invoices_df, BUCKET, key)
+                st.success("Invoices deleted")
+                sleep(2)
+                # counter_up()
         #----------------------SHOW INVOICES
         
 
@@ -254,7 +255,7 @@ with tab2:
                     prefix = f"accounts/{customer_id}/images/{row.file_uid}/page"
                     # st.write(prefix)
                     page_keys_zip = utils.get_latest_keys_from_(s3_client,
-                                                        bucket, 
+                                                        BUCKET, 
                                                         prefix, 
                                                         time_interval=360, 
                                                         time_unit='day', 
@@ -269,7 +270,7 @@ with tab2:
                     
                     for page_image_key in page_keys_df['page_key']:
                         page_image = utils.download_image(s3_client,
-                                                bucket, 
+                                                BUCKET, 
                                                 page_image_key)
                         invoice_images.append(page_image)
 

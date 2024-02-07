@@ -14,7 +14,7 @@ from random import randint
 
 st.title("Home page")
 
-
+BUCKET = 'bergena-invoice-parser-prod'
 
 load_dotenv()
 
@@ -200,24 +200,18 @@ if st.session_state.delete_account:
             )
 
             # Delete user folder and its objects in s3
-            bucket_name = 'bergena-invoice-parser-prod'
+            
             prefix = f"accounts/{st.session_state.customer_id}"
 
-            # # First, delete all objects in the bucket
-            # bucket = s3_client_BRG.Bucket(bucket_name)
-            # bucket.objects.all().delete()
-
-            # Next, delete the bucket itself
-
             paginator = utils.s3_client_BRG.get_paginator('list_objects_v2')
-            pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
+            pages = paginator.paginate(Bucket=BUCKET, Prefix=prefix)
 
             # Delete the objects
             for page in pages:
                 if 'Contents' in page:  # Check if the page has content
                     for obj in page['Contents']:
                         print(f"Deleting object {obj['Key']}...")
-                        utils.s3_client_BRG.delete_object(Bucket=bucket_name, Key=obj['Key'])
+                        utils.s3_client_BRG.delete_object(Bucket=BUCKET, Key=obj['Key'])
 
             st.session_state['tokens']['access_token'] = None
             st.session_state['tokens']['refresh_token'] = None
