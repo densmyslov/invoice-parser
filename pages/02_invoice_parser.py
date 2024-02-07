@@ -28,7 +28,8 @@ st.set_page_config(page_title='PDF Invoice Parser',
                    menu_items=None)
 
 try:
-    x= st.session_state['tokens']['access_token']
+    access_token= st.session_state['tokens']['access_token']
+    customer_id = st.session_state[access_token]['customer_id']
 except:
     st.warning("Please sign in at Home page to use the app")
     st.stop()
@@ -66,6 +67,7 @@ access_token = st.session_state['tokens']['access_token']
 customer_id = st.session_state[access_token]['customer_id']
 st.sidebar.write(f"Customer ID:")
 st.sidebar.write(customer_id)
+
 
 st.title(":orange[PDF Invoice Parser]")
 tab1, tab2 = st.tabs(["Upload invoices","View and Parse Invoices"])
