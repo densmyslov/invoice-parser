@@ -99,7 +99,7 @@ class CognitoIdentityProviderWrapper:
             self.cognito_idp_client.confirm_sign_up(**kwargs)
         except ClientError as err:
             logger.error(
-                "Couldn't confirm sign up for %s. Here's why: %s: %s", user_email,
+                "Couldn't confirm sign up for %s. ",
                 err.response['Error']['Code'], err.response['Error']['Message'])
             raise
         else:

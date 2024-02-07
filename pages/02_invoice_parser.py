@@ -235,18 +235,10 @@ with tab2:
                 st.stop()
             else:
                 # images = []
-                cols_to_show=['date',
-                            'file_name',
-                            'invoice_type',
-                            'num_pages',
-                            'is_parsed',
-                            'completion',
-                            'source',
-                            'pages_used_for_parsing',
-                        'file_uid']
+
 
                 df_to_show = invoices_df.loc[selection.index,:].copy()
-                st.dataframe(df_to_show)
+                st.dataframe(df_to_show[default_cols])
                 # df_to_show['gpt_response'] = None
                 for row in df_to_show.itertuples():
                     prefix = f"accounts/{customer_id}/images/{row.file_uid}/page"
@@ -339,7 +331,9 @@ with tab2:
             if selection.empty:
                 st.error("You have not selected any invoices")
                 st.stop()
-            else:                   
+            else:
+
+                # st.success('Done!')               
                 
                 json_for_parsing_invoices = []
                 for row in invoices_df.loc[selection.index].itertuples():
@@ -349,7 +343,7 @@ with tab2:
                                                         })
 
 
-                    st.write(row.file_name)
+                    # st.write(row.file_name)
 
                 for key_end in ['invoices_to_pdfplumber']:
                     key = f"accounts/{customer_id}/parsing/{key_end}.json"
@@ -358,8 +352,25 @@ with tab2:
                         Key=key,
                         Body = json.dumps(json_for_parsing_invoices)
                     )
-                    # st.write(key)
-                st.write(f"Sent for parsing. Click on 'Refresh' to see the results. It may take up to 5 minutes for results to appear")
+                # st.write(json_for_parsing_invoices)
+                
+                with st.spinner('Wait while our models parse your invoices'):
+                    first_uid = json_for_parsing_invoices[0]['file_uid']
+                    for ind in range(15):
+                        count = randint(0,100000)
+                        invoices_df = utils.load_invoice_df(s3_client, customer_id, counter=count)
+                        is_parsed = invoices_df.query("file_uid == @first_uid").iloc[0].is_parsed
+                        print(ind, count, is_parsed)
+                        if is_parsed:
+                            st.balloons()
+                            sleep(2)
+                            st.success("Invoices parsed")
+                            
+                            counter_up()
+                            break
+                            
+                        sleep(5)
+
 
 
 

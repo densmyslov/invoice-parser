@@ -51,11 +51,7 @@ dynamodb_client = boto3.client('dynamodb',
                         aws_secret_access_key = AWS_SECRET_KEY)
 
 
-# # SET LANGUAGE
-# if 'selected_language' not in st.session_state:
-#     st.session_state.selected_language = "us"
-# if 'user_name' not in st.session_state:
-#     st.session_state.user_name = None
+
 if 'sign_up_state' not in st.session_state:
     st.session_state.sign_up_state = None
 if 'email' not in st.session_state:
@@ -68,12 +64,11 @@ if 'user_family_name' not in st.session_state:
     st.session_state.user_family_name = None
 
 
-# selected_language = st.session_state.selected_language
+
 
 # SIGN UP FORM
 
-# user_locale = locale_options.country_locale_options[st.selectbox(tl.account_setup_dict['sign_up_form_0'][selected_language], list(locale_options.country_locale_options.keys()))]
-# tl.account_setup_dict['sign_up_form_0'][selected_language]
+
 st.write("Please fill out the form below to sign up for a new account:")
 with st.form('sign_up_form'):
     # email
@@ -89,7 +84,7 @@ with st.form('sign_up_form'):
     st.session_state.password = st.text_input("password", type='password')
 
     # given_name
-    # st.session_state.user_given_name = st.text_input(tl.account_setup_dict['sign_up_form_3'][selected_language])
+
     st.session_state.user_given_name = st.text_input("First name (optional)")
 
     # family_name
@@ -105,9 +100,11 @@ with st.form('sign_up_form'):
         email_exists = utils.email_exists(dynamodb_client, 
                                 CUSTOMERS_TABLE_NAME,  
                                 st.session_state.user_email)
+        # st.write(st.session_state.user_email)
         
-        st.error("Account with this email address already exists. Please sign in or reset your password.")
+        
         if email_exists:
+            st.error("Account with this email address already exists. Please sign in or reset your password.")
             st.session_state.sign_up_state = 2
 
         
@@ -125,7 +122,7 @@ with st.form('sign_up_form'):
                     # put user_name in session_state
                     if re.search(r'[0-9a-zA-Z]{8}-',r):
                         st.session_state.sign_up_state = "email_confirmation_required"
-                        st.session_state.user_name = r
+                        st.session_state.customer_id = r
                         st.write("please confirm your email address")
 
 
@@ -136,8 +133,6 @@ with st.form('sign_up_form'):
             else:
                 st.error("Your password is not valid. Please try again.")
 
-        # else:
-        #     st.error(tl.account_setup_dict['email_exists_error'][selected_language])
 
 
 
@@ -145,13 +140,13 @@ if st.session_state.sign_up_state == "email_confirmation_required":
     st.write("Please enter the confirmation code sent to your email address.")
     with st.form('confirm_email_form'):
         verification_code = st.text_input("Confirmation code")
-        if st.form_submit_button(label=tl.submit_button_label[selected_language]):
-            # try:
-                r = cognito_service.confirm_user_sign_up(st.session_state.user_name,  
+        if st.form_submit_button("Submit"):
+            try:
+                r = cognito_service.confirm_user_sign_up(st.session_state.customer_id,  
                                                             verification_code)
                 if r:
                     st.session_state.sign_up_state = "email_confirmed"
-                    st.session_state.user_name = None
+                    st.session_state.customer_id = None
                     st.session_state.sign_up_state = None
                     st.session_state.user_email = None
                     st.session_state.password = None
@@ -161,14 +156,14 @@ if st.session_state.sign_up_state == "email_confirmation_required":
                     st.session_state.sign_in_state = None
                     # st.rerun()
                     st.success("Success ! Your account has been activated")
-            # except:
-            #     st.error("Error confirming email address")
+            except:
+                st.error("Error confirming email address")
 
-    st.write(tl.account_setup_dict['confirm_email_form_2'][selected_language])
+    st.write("Code incorrect")
     # st.session_state.sign_up_state=None
     if st.button('Resend confirmation code'):
         try:
-            r = cognito_service.resend_confirmation(st.session_state.user_name)
+            r = cognito_service.resend_confirmation(st.session_state.customer_id)
             # st.session_state.user_name = None
             # st.session_state.sign_up_state = None
             # st.session_state.user_email = None

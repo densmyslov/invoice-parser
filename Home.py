@@ -105,7 +105,7 @@ else:
                         access_token, refresh_token, id_token = cognito_service.sign_in_user(st.session_state.user_email, 
                                                                                                 st.session_state.password)
                         
-                        # store user_name in session_state so that it won't be overwritten by other users
+                        # store customer_id in session_state so that it won't be overwritten by other users
                         st.session_state[access_token] = {'customer_id': st.session_state.customer_id,
                                                           'user_email': st.session_state.user_email,}
 
@@ -138,29 +138,28 @@ if st.session_state.sign_in_state == 'email_confirmation_required':
     st.write("Please confirm your email")
     if st.button("Send confirmation code"):
         try:
-            r = cognito_service.resend_confirmation(st.session_state.user_name)
+            r = cognito_service.resend_confirmation(st.session_state.customer_id)
             # st.write(r)
         except ClientError as e:
             st.error(f"Error: {e.response['Error']['Message']}")
 
     with st.form('confirm_email_form0'):
-        st.write(tl.account_setup_dict['confirm_email_form_0'][st.session_state.selected_language])
-        verification_code = st.text_input(tl.account_setup_dict['confirm_email_form_1'][st.session_state.selected_language])
+        # st.write(tl.account_setup_dict['confirm_email_form_0'][st.session_state.selected_language])
+        verification_code = st.text_input("Enter the code you received in your email")
         
 
         
-        if st.form_submit_button(label=tl.submit_button_label[st.session_state.selected_language]):
+        if st.form_submit_button("Submit"):
             try:
-                r = cognito_service.confirm_user_sign_up(st.session_state.user_name, 
-                                                        st.session_state.user_email, 
+                r = cognito_service.confirm_user_sign_up(st.session_state.customer_id,
                                                         verification_code)
                 if r:
                     
                     st.write("Success ! Your account has been activated")
                     st.session_state.sign_in_state = 'email_confirmed'
                 else:
-                    st.write(tl.account_setup_dict['error_message'][st.session_state.selected_language])
-                    r = cognito_service.resend_confirmation(st.session_state.user_name)
+                    st.write("Resend confirmation code")
+                    r = cognito_service.resend_confirmation(st.session_state.customer_id)
                     # st.write(r)
             except ClientError as e:
                 st.error(f"Error: {e.response['Error']['Message']}")
@@ -169,8 +168,9 @@ if st.session_state.sign_in_state == 'email_confirmation_required':
 # else:
 #     st.sidebar.write(f"You are signed in as {st.session_state.email}")
 
-# st.write(st.session_state.user_name)
-if st.session_state['tokens'] and 'access_token' in st.session_state['tokens']:
+
+
+if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None:
     
     if st.button(":red[Delete account]"):
         st.session_state.delete_account=True
@@ -183,13 +183,13 @@ if st.session_state.delete_account:
             #Delete the user from the user pool
             r = cognito_idp_client.admin_delete_user(
                 UserPoolId=AWS_COGNITO_USER_POOL_ID,
-                Username=st.session_state.user_name
+                Username=st.session_state.customer_id
             )
 
             st.write("Your account has been deleted")
             # Delete user from DynamoDB invoiceParserCustomers
             item_key = {
-                'user_id': {'S': st.session_state.user_name},  # Replace with your user_id
+                'user_id': {'S': st.session_state.customer_id},  # Replace with your user_id
                 'email': {'S': st.session_state.user_email}       # Replace with your email
             }
 
@@ -201,7 +201,7 @@ if st.session_state.delete_account:
 
             # Delete user folder and its objects in s3
             bucket_name = 'bergena-invoice-parser'
-            prefix = f"accounts/{st.session_state.user_name}"
+            prefix = f"accounts/{st.session_state.customer_id}"
 
             # # First, delete all objects in the bucket
             # bucket = s3_client_BRG.Bucket(bucket_name)
@@ -228,6 +228,8 @@ if st.session_state.delete_account:
             # st.session_state.user_given_name = None
             # st.session_state.user_family_name = None
             st.session_state.delete_account = False
+            for key in st.session_state.keys():
+                del st.session_state[key]
    
             st.rerun()
 
