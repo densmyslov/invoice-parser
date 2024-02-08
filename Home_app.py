@@ -12,10 +12,10 @@ import utils
 from botocore.exceptions import ClientError
 from random import randint
 
-st.title("Home page")
-st.write(st.__version__)
+st.title(":orange[PDF Invoice Parser]")
 
-BUCKET = 'bergena-invoice-parser-prod'
+
+BUCKET = os.environ.get('BUCKET')
 
 load_dotenv()
 
@@ -51,7 +51,7 @@ dynamodb_client = boto3.client('dynamodb',
 
 
 
-st.header("Please sign in to your account here")
+st.write(":green[Please sign in to your account here]")
 
 if 'tokens' not in st.session_state:
     st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
