@@ -146,6 +146,37 @@ def get_col_dict_from_(df, cols):
         col_dict[col_name]=get_col_idx_from(df,col_name)
     return col_dict
 
+@st.cache_data()
+def get_images_to_show(_s3_client,df_to_show,customer_id):
+    """
+    After user selects the invoices to show, this function gets the images from S3
+    """
+    images_to_show = {}
+    for row in df_to_show.itertuples():
+        prefix = f"accounts/{customer_id}/images/{row.file_uid}/page"
+        # st.write(prefix)
+        page_keys_zip = get_latest_keys_from_(_s3_client,
+                                            BUCKET, 
+                                            prefix, 
+                                            time_interval=360, 
+                                            time_unit='day', 
+                                            additional_str='',
+                                            zipped=True)
+                
+        page_keys_df = pd.DataFrame(page_keys_zip, columns=['ts','page_key'])
+        page_keys_df['page_num'] = page_keys_df['page_key'].str.split('_').str[-1].str.split('.').str[0]
+        page_keys_df['page_num'] = page_keys_df['page_num'].astype('int')
+        page_keys_df.sort_values('page_num', inplace=True)
+        invoice_images = []
+        
+        for page_image_key in page_keys_df['page_key']:
+            page_image = download_image(_s3_client,
+                                    BUCKET, 
+                                    page_image_key)
+            invoice_images.append(page_image)
+        images_to_show[row.file_uid] = invoice_images
+    return images_to_show
+
 def get_file_to_download_(df_to_download,
                             sheet_name='Template'):
     output_buffer = BytesIO()

@@ -1,22 +1,11 @@
 import streamlit as st
-# import io
-# from PIL import Image
 import pandas as pd
-# from time import time
-# from difflib import SequenceMatcher
 import utils
 from time import time
 import json
-# import re
-# import numpy as np
-# import math
-# import utils_parser as parser
-# import requests
 import uuid
 from datetime import datetime
 from io import BytesIO
-# from collections import defaultdict
-# import PyPDF2
 from random import randint
 from zipfile import ZipFile, ZIP_DEFLATED
 from time import sleep
@@ -34,7 +23,7 @@ except:
     st.warning("Please sign in at Home page to use the app")
     st.stop()
 
-st.write(st.__version__)
+# st.write(st.__version__)
 
 s3_client = utils.s3_client_BRG
 
@@ -46,6 +35,8 @@ if 'upload_zip_key' not in st.session_state:
     st.session_state['upload_zip_key'] = randint(0,100000)
 if 'upload_pdf_key' not in st.session_state:
     st.session_state['upload_pdf_key'] = randint(100001, 100000000)
+if 'summary_df' not in st.session_state:
+    st.session_state['summary_df'] = pd.DataFrame()
 
 def get_random_value():
     st.session_state['upload_pdf_key'] = randint(100001, 100000000)
@@ -182,14 +173,12 @@ with tab2:
         if q:
             invoices_df0 = invoices_df0.query("search_str.str.contains(@q, case=False)")
         
-        default_cols = ['file_name','file_uid','is_parsed',
-                        'total_sum_check','line_items_sum_check','model',
-                        'time_to_complete','source','completion']
+
         default_cols = ['file_name','file_uid','is_parsed',
                     'total_sum_check','line_items_sum_check',
                     'time_to_complete']
         selection = utils.dataframe_with_selections(invoices_df0[default_cols])
-        # selection = utils.dataframe_with_selections(invoices_df)
+
     
     #===========================INVOICE PROCESSING====================================
         col1, col2, col3 = st.columns(3)
@@ -213,21 +202,6 @@ with tab2:
             keys_to_delete = []
 
             
-            # for file_uid in file_uids:
-            #     prefix = f"accounts/{customer_id}/"
-            #     latest_ts, keys_to_delete0 = utils.get_latest_keys_from_(s3_client,
-            #                                             BUCKET, 
-            #                                             prefix, 
-            #                                             time_interval=360, 
-            #                                             time_unit='day', 
-            #                                             additional_str=file_uid,
-            #                                             zipped=False)
-            #     keys_to_delete.extend(keys_to_delete0)
-
-                # for key in keys_to_delete:
-                #     st.write(f"deleting {key}")
-            
-                #     s3_client.delete_object(Bucket=BUCKET, Key=key)
             key = f"accounts/{st.session_state.customer_id}/file_uids_to_delete.json"
             s3_client.put_object(
                 Bucket=BUCKET,
@@ -247,42 +221,45 @@ with tab2:
 
                 # counter_up()
         #----------------------SHOW INVOICES
+        def to_excel(df1, df2):
+            output = BytesIO()
+            writer = pd.ExcelWriter(output, engine='xlsxwriter')
+            df1.to_excel(writer, index=False, sheet_name='Summary')
+            df2.to_excel(writer, index=False, sheet_name='Line Items')
+            workbook = writer.book
+            worksheet1 = writer.sheets['Summary']
+            worksheet2 = writer.sheets['Line Items']
+            # format1 = workbook.add_format({'num_format': '0.00'})
+            # worksheet1.set_column('A:A', None, format1)
+            # worksheet2.set_column('A:A', None, format1)
+            writer.close()
+            processed_data = output.getvalue()
+            return processed_data
+
+
         
+        # def get_df_to_show(invoices_df,
+        #                    selection):
+        #     df_to_show = invoices_df.loc[selection.index,:].copy()
+            
+
 
 
         if col2.button("Show selected invoices"):
             if selection.empty:
                 st.error("You have not selected any invoices")
                 st.stop()
-            else:
-                # images = []
 
+            else:
 
                 df_to_show = invoices_df.loc[selection.index,:].copy()
                 st.dataframe(df_to_show[default_cols])
-                # df_to_show['gpt_response'] = None
+
+                images_to_show = utils.get_images_to_show(s3_client,df_to_show,customer_id)
+
                 for row in df_to_show.itertuples():
-                    prefix = f"accounts/{customer_id}/images/{row.file_uid}/page"
-                    # st.write(prefix)
-                    page_keys_zip = utils.get_latest_keys_from_(s3_client,
-                                                        BUCKET, 
-                                                        prefix, 
-                                                        time_interval=360, 
-                                                        time_unit='day', 
-                                                        additional_str='',
-                                                        zipped=True)
-                    
-                    page_keys_df = pd.DataFrame(page_keys_zip, columns=['ts','page_key'])
-                    page_keys_df['page_num'] = page_keys_df['page_key'].str.split('_').str[-1].str.split('.').str[0]
-                    page_keys_df['page_num'] = page_keys_df['page_num'].astype('int')
-                    page_keys_df.sort_values('page_num', inplace=True)
-                    invoice_images = []
-                    
-                    for page_image_key in page_keys_df['page_key']:
-                        page_image = utils.download_image(s3_client,
-                                                BUCKET, 
-                                                page_image_key)
-                        invoice_images.append(page_image)
+                    # st.session_state['summary_df'][row[0]] = pd.DataFrame()
+                    invoice_images = images_to_show[row.file_uid]
 
                 
                     st.markdown(f"### :green[{row.file_name}]")
@@ -292,25 +269,36 @@ with tab2:
                             # st.write(row.completion)
                         gpt_response = json.loads(row.completion)
                         # st.write(gpt_response)
-                        invoice_summary_df = pd.DataFrame.from_dict(gpt_response['Summary'],
+                        st.session_state['summary_df'][row[0]] = pd.DataFrame.from_dict(gpt_response['Summary'],
                                                                     orient='index')
+                        st.session_state['summary_df'][row[0]].columns = ['Value']
                         line_items = gpt_response['Line items']
 
 
                         line_items_df = pd.DataFrame(line_items)
 
+                        excel_data = to_excel(st.session_state['summary_df'][row[0]].reset_index(), 
+                                              line_items_df.reset_index())
+
+                        st.download_button(
+                                            label=":blue[Download as Excel]",
+                                            data=excel_data,
+                                            file_name=f"{row.file_name}.xlsx",
+                                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        key = f"download_{row.file_uid}")
+
                         with st.expander(":green[Show invoice summary fields:]"):
                             show_col1, show_col2 = st.columns((1,2))
-                            summary_edited = show_col1.data_editor(invoice_summary_df,
-                                                            num_rows="dynamic")
-                            tab_names = [f"page {i+1}" for i in range(len(page_keys_df))]
+                            show_col1.dataframe(st.session_state['summary_df'][row[0]],
+                                                            column_config={"Value": {"editable": True}})
+                            tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
                             # if page_keys:
                             # with show_col2.container(height=375):
                             with show_col2.container():
                                 for ind, page_tab in enumerate(st.tabs(tab_names)):
 
                                         
-                                        page_tab.image(invoice_images[ind])
+                                        page_tab.image(images_to_show[row.file_uid][ind])
                         with st.expander(":green[Show invoice line items:]"):
                             # show_col1, show_col2 = st.columns((1,2))
                             # with st.container(height=300):
@@ -326,7 +314,7 @@ with tab2:
                             # if page_keys:
                             # with st.container(height=375):
                             with st.container():
-                                tab_names = [f"page {i+1}" for i in range(len(page_keys_df))]
+                                tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
                                 for ind, page_tab in enumerate(st.tabs(tab_names)):
 
                                         page_tab.image(invoice_images[ind])
@@ -334,7 +322,7 @@ with tab2:
                     else:
                         # SHOW PAGE IMAGES INSIDE PAGE TABS
                         with st.expander(":green[Show invoice pages:]"):
-                            tab_names = [f"page {i+1}" for i in range(len(page_keys_df))]
+                            tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
                             # try:
                             for ind, page_tab in enumerate(st.tabs(tab_names)):
                                 page_tab.image(invoice_images[ind])
