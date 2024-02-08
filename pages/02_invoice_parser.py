@@ -213,28 +213,38 @@ with tab2:
             keys_to_delete = []
 
             
-            for file_uid in file_uids:
-                prefix = f"accounts/{customer_id}/"
-                latest_ts, keys_to_delete0 = utils.get_latest_keys_from_(s3_client,
-                                                        BUCKET, 
-                                                        prefix, 
-                                                        time_interval=360, 
-                                                        time_unit='day', 
-                                                        additional_str=file_uid,
-                                                        zipped=False)
-                keys_to_delete.extend(keys_to_delete0)
-            st.error("Are you sure you want to delete the following invoices?")
-            st.write(keys_to_delete)
-            if st.button("Yes, delete"):
-                for key in keys_to_delete:
-                    st.write(f"deleting {key}")
+            # for file_uid in file_uids:
+            #     prefix = f"accounts/{customer_id}/"
+            #     latest_ts, keys_to_delete0 = utils.get_latest_keys_from_(s3_client,
+            #                                             BUCKET, 
+            #                                             prefix, 
+            #                                             time_interval=360, 
+            #                                             time_unit='day', 
+            #                                             additional_str=file_uid,
+            #                                             zipped=False)
+            #     keys_to_delete.extend(keys_to_delete0)
+
+                # for key in keys_to_delete:
+                #     st.write(f"deleting {key}")
             
-                    s3_client.delete_object(Bucket=BUCKET, Key=key)
-                invoices_df = invoices_df[~invoices_df.index.isin(selection.index)]
-                key = f"accounts/{customer_id}/invoices_df.parquet"
-                utils.pd_save_parquet(s3_client, invoices_df, BUCKET, key)
+                #     s3_client.delete_object(Bucket=BUCKET, Key=key)
+            key = f"accounts/{st.session_state.customer_id}/file_uids_to_delete.json"
+            s3_client.put_object(
+                Bucket=BUCKET,
+                Key=key,
+                Body = json.dumps(file_uids)
+            )
+
+
+            invoices_df = invoices_df[~invoices_df.index.isin(selection.index)]
+            key = f"accounts/{customer_id}/invoices_df.parquet"
+            utils.pd_save_parquet(s3_client, invoices_df, BUCKET, key)
+            with st.spinner('Wait while we delete your invoices'):
+                sleep(5)
                 st.success("Invoices deleted")
                 sleep(2)
+                counter_up()
+
                 # counter_up()
         #----------------------SHOW INVOICES
         

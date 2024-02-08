@@ -26,12 +26,13 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_KEY = os.environ.get('AWS_SECRET_KEY')
 
 CUSTOMERS_TABLE_NAME = os.environ.get('CUSTOMERS_TABLE_NAME')
+REGION_NAME = os.environ.get('REGION_NAME')
 
 
 
 # CREATE COGNITO CLIENT
 cognito_idp_client = boto3.client('cognito-idp',
-                              region_name = 'us-east-1',
+                              region_name = REGION_NAME,
                               aws_access_key_id = AWS_ACCESS_KEY_ID,
             aws_secret_access_key = AWS_SECRET_KEY)
 
@@ -43,7 +44,7 @@ cognito_service = cognito.CognitoIdentityProviderWrapper(cognito_idp_client,
                                client_secret = AWS_COGNITO_CLIENT_SECRET)
 # CREATE DYNAMODB CLIENT
 dynamodb_client = boto3.client('dynamodb', 
-                        region_name='us-east-1',
+                        region_name=REGION_NAME,
                         aws_access_key_id = AWS_ACCESS_KEY_ID,
                         aws_secret_access_key = AWS_SECRET_KEY)
 
