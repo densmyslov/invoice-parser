@@ -13,6 +13,7 @@ from botocore.exceptions import ClientError
 from random import randint
 
 st.title("Home page")
+st.write(st.__version__)
 
 BUCKET = 'bergena-invoice-parser-prod'
 
