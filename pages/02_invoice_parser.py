@@ -174,7 +174,7 @@ with tab2:
             invoices_df0 = invoices_df0.query("search_str.str.contains(@q, case=False)")
         
 
-        default_cols = ['file_name','file_uid','is_parsed',
+        default_cols = ['file_name','file_uid','num_pages','invoice_type','is_parsed',
                     'total_sum_check','line_items_sum_check',
                     'time_to_complete']
         selection = utils.dataframe_with_selections(invoices_df0[default_cols])
