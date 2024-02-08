@@ -269,15 +269,15 @@ with tab2:
                             # st.write(row.completion)
                         gpt_response = json.loads(row.completion)
                         # st.write(gpt_response)
-                        st.session_state['summary_df'][row[0]] = pd.DataFrame.from_dict(gpt_response['Summary'],
+                        summary_df = pd.DataFrame.from_dict(gpt_response['Summary'],
                                                                     orient='index')
-                        st.session_state['summary_df'][row[0]].columns = ['Value']
+                        summary_df.columns = ['Value']
                         line_items = gpt_response['Line items']
 
 
                         line_items_df = pd.DataFrame(line_items)
 
-                        excel_data = to_excel(st.session_state['summary_df'][row[0]].reset_index(), 
+                        excel_data = to_excel(summary_df.reset_index(), 
                                               line_items_df.reset_index())
 
                         st.download_button(
@@ -289,20 +289,19 @@ with tab2:
 
                         with st.expander(":green[Show invoice summary fields:]"):
                             show_col1, show_col2 = st.columns((1,2))
-                            show_col1.dataframe(st.session_state['summary_df'][row[0]],
-                                                            column_config={"Value": {"editable": True}})
+                            show_col1.dataframe(summary_df)
                             tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
                             # if page_keys:
-                            # with show_col2.container(height=375):
-                            with show_col2.container():
+                            with show_col2.container(height=375):
+                            # with show_col2.container():
                                 for ind, page_tab in enumerate(st.tabs(tab_names)):
 
                                         
                                         page_tab.image(images_to_show[row.file_uid][ind])
                         with st.expander(":green[Show invoice line items:]"):
                             # show_col1, show_col2 = st.columns((1,2))
-                            # with st.container(height=300):
-                            with st.container():
+                            with st.container(height=200):
+                            # with st.container():
                                 st.write(f"Sum total of line items = {line_items_df.iloc[0,-1]}")
                                 st.dataframe(line_items_df.iloc[:,1:-1],
                                                                 column_order=('Line item product IDs',
@@ -312,8 +311,8 @@ with tab2:
                                                                             'Line item total amounts'))
                             
                             # if page_keys:
-                            # with st.container(height=375):
-                            with st.container():
+                            with st.container(height=375):
+                            # with st.container():
                                 tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
                                 for ind, page_tab in enumerate(st.tabs(tab_names)):
 
