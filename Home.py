@@ -61,8 +61,12 @@ if 'sign_in_state' not in st.session_state:
 if 'delete_account' not in st.session_state:
     st.session_state.delete_account = False
 
+if 'forgot_password' not in st.session_state:   
+    st.session_state.forgot_password = True
+if 'reset_password' not in st.session_state:
+    st.session_state.reset_password = False
 
-    
+# USER IN SIGNED-IN STATE
 if 'tokens' in st.session_state and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None:
     # Refresh token if it's been more than 55 minutes since the last refresh
     # if time.time() - st.session_state['tokens']['last_refresh'] > 3300:
@@ -80,6 +84,7 @@ if 'tokens' in st.session_state and 'access_token' in st.session_state['tokens']
             del st.session_state[key]
         st.rerun()
 
+# USER NEEDS TO SIGN IN
 else:
 
     with st.form(key='sign_in_form'):
@@ -134,7 +139,7 @@ else:
                 # st.rerun()   
 
 
-
+# USER NEEDS TO CONFIRM EMAIL
 if st.session_state.sign_in_state == 'email_confirmation_required':
     st.write("Please confirm your email")
     if st.button("Send confirmation code"):
@@ -166,10 +171,9 @@ if st.session_state.sign_in_state == 'email_confirmation_required':
                 st.error(f"Error: {e.response['Error']['Message']}")
 
 
-# else:
-#     st.sidebar.write(f"You are signed in as {st.session_state.email}")
 
 
+# DELETE ACCOUNT (IF USER IS SIGNED IN)
 
 if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None:
     
@@ -238,3 +242,59 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
     st.sidebar.write(customer_id)
 else:
     st.sidebar.write("You are not signed in")
+
+
+# USER FORGOT PASSWORD
+# st.write(st.session_state['tokens'])
+if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and not st.session_state['tokens']['access_token']:
+    if st.button(":red[Forgot password?]"): 
+        st.session_state.forgot_password = True
+        st.rerun()
+    if st.session_state.forgot_password:
+        with st.form('forgot_password_form'):
+            st.write("Enter your email address")
+            user_email = st.text_input("Email address")
+            
+            if st.form_submit_button("Submit"):
+                try:
+                    r = cognito_service.forgot_password(user_email)
+                    email_exists = utils.email_exists(dynamodb_client, 
+                    CUSTOMERS_TABLE_NAME,  
+                    user_email)
+                    st.success("If you have an account, you will receive an email with a code to reset your password.")
+                    if email_exists:
+                        st.session_state.reset_password = True
+                except ClientError as e:
+                    st.error(f"Error: {e.response['Error']['Message']}")
+
+        if st.session_state.reset_password:
+            with st.form('reset_password_form'):
+                st.write("Enter the code you received in your email")
+                verification_code = st.text_input("Verification code")
+                new_password = st.text_input("New password", type='password')
+                new_password_confirm = st.text_input("Confirm new password", type='password')
+                st.caption("Your password must meet the following requirements:")
+                st.caption("1. At least 8 characters in length.")
+                st.caption("2. At least one uppercase letter.")
+                st.caption("3. At least one lowercase letter.")
+                st.caption("4. At least one number.")
+                st.caption("5. At least one special character.")
+                if st.form_submit_button("Submit"):
+                    if new_password == new_password_confirm:
+                        if utils.password_is_valid(new_password):
+                            st.write("password is valid")
+                            try:
+                                st.write("please wait...")
+                                r = cognito_service.confirm_forgot_password(user_email, verification_code, new_password)
+                                if r:
+                                    st.success("Your password has been reset")
+                                    st.session_state.reset_password = False
+                                    st.session_state.forgot_password = False
+                            except ClientError as e:
+                                st.error(f"Error: {e.response['Error']['Message']}")
+                        else:
+                            st.error("Your password is not valid. Please try again.")
+                    else:
+                        st.error("Your passwords do not match.")
+
+
