@@ -299,4 +299,4 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
                         st.error("Your passwords do not match.")
 
 
-st.video('https://youtu.be/90sOIpE3E2I')
+st.video('https://youtu.be/kvIwnsxDgUI')
