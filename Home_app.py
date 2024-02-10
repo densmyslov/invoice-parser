@@ -80,13 +80,7 @@ if 'tokens' in st.session_state and 'access_token' in st.session_state['tokens']
 
     st.write("Welcome! You're logged in.")
     # st.write(list(st.session_state.keys()))
-    if st.button('Logout'):
-        # st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
-        # st.session_state['tokens'] = None
-        for key in st.session_state.keys():
-            st.write(key)
-            del st.session_state[key]
-        st.rerun()
+
 
 # USER NEEDS TO SIGN IN
 else:
@@ -245,6 +239,13 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
     st.sidebar.write(f"You are signed in as {user_email}")
     st.sidebar.write(f"Your Customer_ID:")
     st.sidebar.write(customer_id)
+    if st.sidebar.button(':red[Logout]'):
+    # st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
+    # st.session_state['tokens'] = None
+        for key in st.session_state.keys():
+            # st.write(key)
+            del st.session_state[key]
+        st.rerun()
 else:
     st.sidebar.write("You are not signed in")
 
