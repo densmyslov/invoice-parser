@@ -14,6 +14,9 @@ from random import randint
 
 st.title(":orange[PDF Invoice Parser]")
 
+with st.expander("Watch demo video"):
+    st.video('https://youtu.be/kvIwnsxDgUI')
+
 
 BUCKET = os.environ.get('BUCKET')
 
@@ -94,7 +97,7 @@ else:
         st.session_state.password = st.text_input("password", 
                                 type='password')
 
-        if st.form_submit_button(label="sign-in"):
+        if st.form_submit_button(label=":green[sign-in]"):
 
             r = utils.get_dynamodb_table_record_from_(dynamodb_client,
                                             CUSTOMERS_TABLE_NAME,
@@ -256,7 +259,7 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
             st.write("Enter your email address")
             user_email = st.text_input("Email address")
             
-            if st.form_submit_button("Submit"):
+            if st.form_submit_button(":red[Submit]"):
                 try:
                     r = cognito_service.forgot_password(user_email)
                     email_exists = utils.email_exists(dynamodb_client, 
@@ -280,7 +283,7 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
                 st.caption("3. At least one lowercase letter.")
                 st.caption("4. At least one number.")
                 st.caption("5. At least one special character.")
-                if st.form_submit_button("Submit"):
+                if st.form_submit_button(":red[Submit]"):
                     if new_password == new_password_confirm:
                         if utils.password_is_valid(new_password):
                             st.write("password is valid")
@@ -299,4 +302,3 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
                         st.error("Your passwords do not match.")
 
 
-st.video('https://youtu.be/kvIwnsxDgUI')
