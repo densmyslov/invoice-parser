@@ -54,7 +54,7 @@ dynamodb_client = boto3.client('dynamodb',
 
 
 
-st.write(":green[Please sign in to your account here]")
+
 
 if 'tokens' not in st.session_state:
     st.session_state['tokens'] = {'access_token': None, 'refresh_token': None, 'id_token': None, 'last_refresh': time.time()}
@@ -90,6 +90,7 @@ if 'tokens' in st.session_state and 'access_token' in st.session_state['tokens']
 
 # USER NEEDS TO SIGN IN
 else:
+    st.write(":green[Please sign in to your account here]")
 
     with st.form(key='sign_in_form'):
 
@@ -179,62 +180,62 @@ if st.session_state.sign_in_state == 'email_confirmation_required':
 
 # DELETE ACCOUNT (IF USER IS SIGNED IN)
 
-if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None:
+# if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None:
     
-    if st.button(":red[Delete account]"):
-        st.session_state.delete_account=True
-        st.rerun()
+#     if st.button(":red[Delete account]"):
+#         st.session_state.delete_account=True
+#         st.rerun()
 
-if st.session_state.delete_account:
-        st.write(":red[Are you sure you want to delete your account?]")
-        if st.button("Yes, delete my account"):
+# if st.session_state.delete_account:
+#         st.write(":red[Are you sure you want to delete your account?]")
+#         if st.button("Yes, delete my account"):
 
-            #Delete the user from the user pool
-            r = cognito_idp_client.admin_delete_user(
-                UserPoolId=AWS_COGNITO_USER_POOL_ID,
-                Username=st.session_state.customer_id
-            )
+#             #Delete the user from the user pool
+#             r = cognito_idp_client.admin_delete_user(
+#                 UserPoolId=AWS_COGNITO_USER_POOL_ID,
+#                 Username=st.session_state.customer_id
+#             )
 
-            st.write("Your account has been deleted")
-            # Delete user from DynamoDB invoiceParserCustomers
-            item_key = {
-                'user_id': {'S': st.session_state.customer_id},  # Replace with your user_id
-                'email': {'S': st.session_state.user_email}       # Replace with your email
-            }
+#             st.write("Your account has been deleted")
+#             # Delete user from DynamoDB invoiceParserCustomers
+#             item_key = {
+#                 'user_id': {'S': st.session_state.customer_id},  # Replace with your user_id
+#                 'email': {'S': st.session_state.user_email}       # Replace with your email
+#             }
 
-            # Delete item
-            r = dynamodb_client.delete_item(
-                TableName=CUSTOMERS_TABLE_NAME,
-                Key=item_key
-            )
+#             # Delete item
+#             r = dynamodb_client.delete_item(
+#                 TableName=CUSTOMERS_TABLE_NAME,
+#                 Key=item_key
+#             )
 
-            # Delete user folder and its objects in s3
+#             # Delete user folder and its objects in s3
             
-            prefix = f"accounts/{st.session_state.customer_id}"
+#             prefix = f"accounts/{st.session_state.customer_id}"
 
-            paginator = utils.s3_client_BRG.get_paginator('list_objects_v2')
-            pages = paginator.paginate(Bucket=BUCKET, Prefix=prefix)
+#             paginator = utils.s3_client_BRG.get_paginator('list_objects_v2')
+#             pages = paginator.paginate(Bucket=BUCKET, Prefix=prefix)
 
-            # Delete the objects
-            for page in pages:
-                if 'Contents' in page:  # Check if the page has content
-                    for obj in page['Contents']:
-                        print(f"Deleting object {obj['Key']}...")
-                        utils.s3_client_BRG.delete_object(Bucket=BUCKET, Key=obj['Key'])
+#             # Delete the objects
+#             for page in pages:
+#                 if 'Contents' in page:  # Check if the page has content
+#                     for obj in page['Contents']:
+#                         print(f"Deleting object {obj['Key']}...")
+#                         utils.s3_client_BRG.delete_object(Bucket=BUCKET, Key=obj['Key'])
 
-            st.session_state['tokens']['access_token'] = None
-            st.session_state['tokens']['refresh_token'] = None
-            st.session_state['tokens']['id_token'] = None
-            # st.session_state.sign_up_state = None
-            # st.session_state.user_email = None
-            # st.session_state.password = None
-            # st.session_state.user_given_name = None
-            # st.session_state.user_family_name = None
-            st.session_state.delete_account = False
-            for key in st.session_state.keys():
-                del st.session_state[key]
+#             st.session_state['tokens']['access_token'] = None
+#             st.session_state['tokens']['refresh_token'] = None
+#             st.session_state['tokens']['id_token'] = None
+#             # st.session_state.sign_up_state = None
+#             # st.session_state.user_email = None
+#             # st.session_state.password = None
+#             # st.session_state.user_given_name = None
+#             # st.session_state.user_family_name = None
+#             st.session_state.delete_account = False
+#             for key in st.session_state.keys():
+#                 del st.session_state[key]
    
-            st.rerun()
+#             st.rerun()
 
 
 if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None: 
