@@ -1,13 +1,9 @@
 import os
 from dotenv import load_dotenv
-# from dotenv import dotenv_values
 import boto3
-# from cognito import CognitoIdentityProviderWrapper as cogwrap
 import cognito
 import streamlit as st
-import text_labels as tl
 import time
-# import re
 import utils
 from botocore.exceptions import ClientError
 from random import randint

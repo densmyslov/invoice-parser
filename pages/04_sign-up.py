@@ -1,20 +1,12 @@
 import os
 from dotenv import load_dotenv
-from dotenv import dotenv_values
 import boto3
-# from cognito import CognitoIdentityProviderWrapper as cogwrap
 import cognito
 import streamlit as st
-import text_labels as tl
-# import locale_options
 import re
 import utils
 from botocore.exceptions import ClientError
-import hmac
-import hashlib
-import base64
-import logging
-import uuid
+
 
 
 load_dotenv()
@@ -167,17 +159,11 @@ if st.session_state.sign_up_state == "email_confirmation_required":
         if st.button('Resend confirmation code'):
             try:
                 r = cognito_service.resend_confirmation(st.session_state.customer_id)
-                # st.session_state.user_name = None
-                # st.session_state.sign_up_state = None
-                # st.session_state.user_email = None
-                # st.session_state.password = None
-                # st.session_state.user_given_name = None
-                # st.session_state.user_family_name = None
+
 
             except ClientError as e:
                 st.error(f"Error: {e.response['Error']['Message']}")
                 st.session_state.sign_up_state = "email_confirmation_required"
 
-# st.write(st.session_state.sign_up_state)
 
 
