@@ -46,9 +46,9 @@ def counter_up():
     st.session_state['counter'] = randint(0,10000000)
     st.rerun()
 
-if st.sidebar.button("Refresh"):
-    st.session_state['counter'] +=1
-    st.rerun()
+# if st.sidebar.button("Refresh"):
+#     st.session_state['counter'] +=1
+#     st.rerun()
 
 # try:
 # if st.session_state['tokens']['access_token']:
@@ -157,7 +157,9 @@ with tab1:
 #=================================PARSE INVOICES====================================================
 with tab2:
 
-    
+    if st.button(":green[Refresh table]"):
+        st.session_state['counter'] +=1
+        st.rerun()
 
     # parser_mode = st.sidebar.radio("Parser mode",("Image","Text"), key = 'parser_mode')
 
