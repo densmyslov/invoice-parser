@@ -153,26 +153,30 @@ def get_images_to_show(_s3_client,df_to_show,customer_id):
     """
     images_to_show = {}
     for row in df_to_show.itertuples():
-        prefix = f"accounts/{customer_id}/images/{row.file_uid}/page"
-        # st.write(prefix)
-        page_keys_zip = get_latest_keys_from_(_s3_client,
-                                            BUCKET, 
-                                            prefix, 
-                                            time_interval=360, 
-                                            time_unit='day', 
-                                            additional_str='',
-                                            zipped=True)
+        page_image_keys = [f"accounts/{customer_id}/images/{row.file_uid}/page_{page_num}.jpeg" for page_num in range(row.num_pages)]
+        # prefix = f"accounts/{customer_id}/images/{row.file_uid}/page"
+        # # st.write(prefix)
+        # page_keys_zip = get_latest_keys_from_(_s3_client,
+        #                                     BUCKET, 
+        #                                     prefix, 
+        #                                     time_interval=360, 
+        #                                     time_unit='day', 
+        #                                     additional_str='',
+        #                                     zipped=True)
                 
-        page_keys_df = pd.DataFrame(page_keys_zip, columns=['ts','page_key'])
-        page_keys_df['page_num'] = page_keys_df['page_key'].str.split('_').str[-1].str.split('.').str[0]
-        page_keys_df['page_num'] = page_keys_df['page_num'].astype('int')
-        page_keys_df.sort_values('page_num', inplace=True)
+        # page_keys_df = pd.DataFrame(page_keys_zip, columns=['ts','page_key'])
+        # page_keys_df['page_num'] = page_keys_df['page_key'].str.split('_').str[-1].str.split('.').str[0]
+        # page_keys_df['page_num'] = page_keys_df['page_num'].astype('int')
+        # page_keys_df.sort_values('page_num', inplace=True)
         invoice_images = []
         
-        for page_image_key in page_keys_df['page_key']:
-            page_image = download_image(_s3_client,
-                                    BUCKET, 
-                                    page_image_key)
+        for page_image_key in page_image_keys:
+            try:
+                page_image = download_image(_s3_client,
+                                        BUCKET, 
+                                        page_image_key)
+            except:
+                page_image = Image.new('RGB', (1, 1), (255, 255, 255))
             invoice_images.append(page_image)
         images_to_show[row.file_uid] = invoice_images
     return images_to_show

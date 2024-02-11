@@ -257,6 +257,7 @@ with tab2:
 
                 images_to_show = utils.get_images_to_show(s3_client,df_to_show,customer_id)
 
+
                 for row in df_to_show.itertuples():
                     # st.session_state['summary_df'][row[0]] = pd.DataFrame()
                     invoice_images = images_to_show[row.file_uid]
@@ -291,6 +292,7 @@ with tab2:
                             show_col1, show_col2 = st.columns((1,2))
                             show_col1.dataframe(summary_df)
                             tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
+                            # st.write(tab_names)
                             # if page_keys:
                             with show_col2.container(height=375):
                             # with show_col2.container():
