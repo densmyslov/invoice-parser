@@ -368,7 +368,7 @@ with tab2:
                 
                 with st.spinner('Wait while our models parse your invoices'):
                     first_uid = json_for_parsing_invoices[0]['file_uid']
-                    for ind in range(15):
+                    for ind in range(45):
                         count = randint(0,100000)
                         invoices_df = utils.load_invoice_df(s3_client, customer_id, counter=count)
                         is_parsed = invoices_df.query("file_uid == @first_uid").iloc[0].is_parsed
@@ -381,7 +381,7 @@ with tab2:
                             counter_up()
                             break
                             
-                        sleep(5)
+                        sleep(2)
 
 
 
