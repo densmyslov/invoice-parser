@@ -11,7 +11,7 @@ from random import randint
 st.title(":orange[PDF Invoice Parser]")
 
 with st.expander("Watch demo video"):
-    st.video('https://youtu.be/kvIwnsxDgUI')
+    st.video('https://youtu.be/zVXccGBUs_s')
 
 
 BUCKET = os.environ.get('BUCKET')
