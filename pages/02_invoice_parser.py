@@ -11,7 +11,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 from time import sleep
 
 
-st.set_page_config(page_title='Invoice Parser', 
+st.set_page_config(page_title='Invoice Processor', 
                    page_icon=None, layout="wide", 
                    initial_sidebar_state="auto", 
                    menu_items=None)
