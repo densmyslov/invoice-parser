@@ -16,6 +16,8 @@ st.set_page_config(page_title='Invoice Processor',
                    initial_sidebar_state="auto", 
                    menu_items=None)
 
+st.title('Invoice Processor')
+
 try:
     access_token= st.session_state['tokens']['access_token']
     customer_id = st.session_state[access_token]['customer_id']

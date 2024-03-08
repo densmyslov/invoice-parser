@@ -8,7 +8,7 @@ import utils
 from botocore.exceptions import ClientError
 from random import randint
 
-st.title(":orange[PDF Invoice Parser]")
+st.title(":orange[Invoice Processor]")
 
 with st.expander("Watch demo video"):
     st.video('https://youtu.be/zVXccGBUs_s')
