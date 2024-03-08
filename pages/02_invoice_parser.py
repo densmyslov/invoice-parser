@@ -62,7 +62,7 @@ st.sidebar.write(f"Customer ID:")
 st.sidebar.write(customer_id)
 
 
-st.title(":orange[PDF Invoice Parser]")
+
 tab1, tab2 = st.tabs(["Upload invoices","View and Parse Invoices"])
 
 #=================================UPLOAD INVOICES====================================================
