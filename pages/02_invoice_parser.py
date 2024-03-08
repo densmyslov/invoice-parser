@@ -16,7 +16,7 @@ st.set_page_config(page_title='Invoice Processor',
                    initial_sidebar_state="auto", 
                    menu_items=None)
 
-st.title('Invoice Processor')
+st.title(':orange[Invoice Processor]')
 
 try:
     access_token= st.session_state['tokens']['access_token']
