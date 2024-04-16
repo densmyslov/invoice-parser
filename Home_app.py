@@ -130,11 +130,11 @@ with st.expander(":green[Test app without signing in]"):
             # if st.session_state.demo_session_id:
                 with st.spinner('Wait while our model processes your invoice'):
                     # first_uid = json_for_parsing_invoices[0]['file_uid']
-                    for ind in range(15):
-                        st.write(ind)
+                    for ind in range(30):
+                        # st.write(ind)
                         count = randint(0,100000)
                         invoices_df = utils.load_invoice_df(s3_client, customer_id, counter=count)
-                        st.write(invoices_df.shape)
+                        # st.write(invoices_df.shape)
                         file_uid = st.session_state.demo_session_id
                         if not invoices_df.query("zip_file_uid == @file_uid").empty:
                             is_parsed = invoices_df.query("zip_file_uid == @file_uid").iloc[0].is_parsed
@@ -143,10 +143,11 @@ with st.expander(":green[Test app without signing in]"):
                                 st.balloons()
                                 sleep(2)
                                 st.success("Your invoice has been processed")
-
+                                st.success("You can now select View processed invoice")
+                                sleep(5)
                                 counter_up()
                                 st.rerun()
-                                break
+                                # break
                         # else:
                         #     if invoices_df.query("zip_file_uid == @file_uid").empty:
                         #         st.write("empty")
