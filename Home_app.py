@@ -138,15 +138,12 @@ with st.expander(":green[Test app without signing in]"):
                         file_uid = st.session_state.demo_session_id
                         if not invoices_df.query("zip_file_uid == @file_uid").empty:
                             is_parsed = invoices_df.query("zip_file_uid == @file_uid").iloc[0].is_parsed
-                            print(ind, count, is_parsed)
+                            # print(ind, count, is_parsed)
                             if is_parsed:
                                 st.balloons()
                                 sleep(2)
-                                st.success("Invoices parsed")
-                                
-                                # counter_up()
-                                
-                                # st.session_state.demo_session_id = None
+                                st.success("Your invoice has been processed")
+
                                 counter_up()
                                 st.rerun()
                                 break
