@@ -65,7 +65,7 @@ if 'delete_account' not in st.session_state:
     st.session_state.delete_account = False
 
 if 'forgot_password' not in st.session_state:   
-    st.session_state.forgot_password = True
+    st.session_state.forgot_password = False
 if 'reset_password' not in st.session_state:
     st.session_state.reset_password = False
 if 'upload_pdf_key1' not in st.session_state:
