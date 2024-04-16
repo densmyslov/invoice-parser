@@ -93,7 +93,7 @@ with st.expander(":green[Test app without signing in]"):
 
 #DEMO:  USER IS NOT SIGNED IN
 #================================================================================================
-    tab1, tab2 = st.tabs(["Upload pdf invoice","View and Parse Invoice"])
+    tab1, tab2 = st.tabs(["Upload pdf invoice","View processed invoice"])
     customer_id = 'dcc6f7bf-1cf8-478a-b054-091769e488b3' # nearest@nearestllc.com
 
     # UPLOAD/PARSE PDF INVOICE
@@ -108,7 +108,7 @@ with st.expander(":green[Test app without signing in]"):
                                 accept_multiple_files=False,
                                 key = st.session_state['upload_pdf_key1'])
         if uploaded_pdf_files:
-            if st.button(":orange[Upload PDF invoices to your cloud account]"):
+            if st.button(":orange[Upload and Process PDF invoice]"):
         
                 zip_buffer = utils.create_zip([uploaded_pdf_files])
 
