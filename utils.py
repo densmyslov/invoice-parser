@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 import cognito
 from botocore.exceptions import ClientError
 from PIL import Image
+from zipfile import ZipFile, ZIP_DEFLATED
 
 # s3_client_BRG = boto3.client('s3',
 #             aws_access_key_id = 'AKIAQZSZZFTKDGNFQVGL',
@@ -70,6 +71,22 @@ rekognition_client= boto3.client('rekognition',
 
 
 # FUNCTIONS
+
+def create_zip(uploaded_files):
+    # In-memory buffer to store the zip file
+    zip_buffer = BytesIO()
+    
+    # Create a zip file in the buffer
+    with ZipFile(zip_buffer, "a", ZIP_DEFLATED, False) as zip_file:
+        for file in uploaded_files:
+            # Read the content of the file
+            file_content = file.getvalue()
+            # Add file to the zip file
+            zip_file.writestr(file.name, file_content)
+
+    # Go to the beginning of the buffer
+    zip_buffer.seek(0)
+    return zip_buffer
 
 def dataframe_with_selections(df: pd.DataFrame, init_value: bool = False) -> pd.DataFrame:
     df_with_selections = df.copy()

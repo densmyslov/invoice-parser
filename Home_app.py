@@ -7,14 +7,17 @@ import time
 import utils
 from botocore.exceptions import ClientError
 from random import randint
-
-st.title(":orange[Invoice Processor]")
-
-with st.expander("Watch demo video"):
-    st.video('https://youtu.be/zVXccGBUs_s')
+import uuid
+from time import sleep
+from random import randint
+import pandas as pd
+import json
 
 
 BUCKET = os.environ.get('BUCKET')
+s3_client = utils.s3_client_BRG
+
+# BUCKET = bucket = 'bergena-invoice-parser-prod'
 
 load_dotenv()
 
@@ -65,6 +68,192 @@ if 'forgot_password' not in st.session_state:
     st.session_state.forgot_password = True
 if 'reset_password' not in st.session_state:
     st.session_state.reset_password = False
+if 'upload_pdf_key1' not in st.session_state:
+    st.session_state.upload_pdf_key1 = randint(0,1000000000)
+if 'demo_session_id' not in st.session_state:
+    st.session_state.demo_session_id = None
+if 'counter' not in st.session_state:
+    st.session_state['counter'] = 0
+
+
+
+def counter_up():
+    st.session_state['counter'] = randint(0,10000000)
+    st.rerun()
+
+st.title(":orange[Invoice Processor]")
+
+with st.expander(":green[Watch demo video]"):
+    st.video('https://youtu.be/zVXccGBUs_s')
+
+with st.expander(":green[Test app without signing in]"):
+    st.caption(""":orange[You can test the app without signing in. 
+             However, you will not be able to save your work or process multiple invoices at a time.
+             Please sign in to enjoy all the features.]""")
+
+#DEMO:  USER IS NOT SIGNED IN
+#================================================================================================
+    tab1, tab2 = st.tabs(["Upload pdf invoice","View and Parse Invoice"])
+    customer_id = 'dcc6f7bf-1cf8-478a-b054-091769e488b3' # nearest@nearestllc.com
+
+    # UPLOAD/PARSE PDF INVOICE
+    #-------------------------------------------------------------------------------------------
+    # 'demo' is added to an uploaded file name to differentiate it from a file uploaded by a signed-in user
+    # file_id is replaced by st.session_state.demo_session_id
+    with tab1:
+        col1, col2 = st.columns(2)
+        
+        uploaded_pdf_files = col1.file_uploader(":green[Upload PDF invoice]", 
+                                type=["pdf"],
+                                accept_multiple_files=False,
+                                key = st.session_state['upload_pdf_key1'])
+        if uploaded_pdf_files:
+            if st.button(":orange[Upload PDF invoices to your cloud account]"):
+        
+                zip_buffer = utils.create_zip([uploaded_pdf_files])
+
+                st.session_state.demo_session_id = uuid.uuid4().hex
+                # st.write(st.session_state.demo_session_id)
+                
+                key = f"accounts/{customer_id}/zip/{st.session_state.demo_session_id}/zipped_pdfs_v1.zip"
+                # st.write(key)
+                
+                metadata = {'customer_id': customer_id}
+                s3_client.put_object(Bucket=BUCKET, 
+                                            Key=key, 
+                                            Body=zip_buffer.getvalue(),
+                                            Metadata = metadata)
+
+
+                zip_buffer.seek(0)
+                st.session_state.upload_pdf_key = randint(100000, 100000000)
+            # if st.session_state.demo_session_id:
+                with st.spinner('Wait while our model processes your invoice'):
+                    # first_uid = json_for_parsing_invoices[0]['file_uid']
+                    for ind in range(15):
+                        st.write(ind)
+                        count = randint(0,100000)
+                        invoices_df = utils.load_invoice_df(s3_client, customer_id, counter=count)
+                        st.write(invoices_df.shape)
+                        file_uid = st.session_state.demo_session_id
+                        if not invoices_df.query("zip_file_uid == @file_uid").empty:
+                            is_parsed = invoices_df.query("zip_file_uid == @file_uid").iloc[0].is_parsed
+                            print(ind, count, is_parsed)
+                            if is_parsed:
+                                st.balloons()
+                                sleep(2)
+                                st.success("Invoices parsed")
+                                
+                                # counter_up()
+                                
+                                # st.session_state.demo_session_id = None
+                                counter_up()
+                                st.rerun()
+                                break
+                        # else:
+                        #     if invoices_df.query("zip_file_uid == @file_uid").empty:
+                        #         st.write("empty")
+                            
+                        sleep(3)
+                    # st.write(":orange[Your invoices have been uploaded to your cloud account]")  
+                    # sleep(5) 
+            # st.session_state.demo_session_id = None
+            # counter_up()
+
+
+    with tab2:
+        invoices_df = pd.DataFrame()
+        zip_file_id = st.session_state.demo_session_id
+        # if st.button(":green[Refresh table]"):
+        #     st.session_state['counter'] +=1 
+        #     st.rerun()
+        if zip_file_id:
+            invoices_df = utils.load_invoice_df(s3_client,
+                                    customer_id,
+                                    counter = st.session_state['counter'])
+            invoices_df = invoices_df.query("zip_file_uid==@zip_file_id")
+    
+        if invoices_df.empty:
+            st.error("Please upload an invoice first")
+        else:
+            
+            default_cols = ['file_name','zip_file_uid','file_uid','num_pages','invoice_type','model',
+                        'total_sum_check','line_items_sum_check','is_parsed',
+                        'time_to_complete']
+            # selection = utils.dataframe_with_selections(invoices_df[default_cols])
+            images_to_show = utils.get_images_to_show(s3_client,invoices_df,customer_id)
+            for row in invoices_df.itertuples():
+                    # st.session_state['summary_df'][row[0]] = pd.DataFrame()
+                    invoice_images = images_to_show[row.file_uid]
+
+                
+                    st.markdown(f"### :green[{row.file_name}]")
+                    if row.is_parsed:
+                        # try:
+                        # gpt_response=  json.loads(row.completion)['choices'][0]['message']['content']
+                            # st.write(row.completion)
+                        gpt_response = json.loads(row.completion)
+                        # st.write(gpt_response)
+                        summary_df = pd.DataFrame.from_dict(gpt_response['Summary'],
+                                                                    orient='index')
+                        summary_df.columns = ['Value']
+                        line_items = gpt_response['Line items']
+
+
+                        line_items_df = pd.DataFrame(line_items)
+
+                        excel_data = utils.to_excel(summary_df.reset_index(), 
+                                              line_items_df.reset_index())
+
+                        st.download_button(
+                                            label=":blue[Download as Excel]",
+                                            data=excel_data,
+                                            file_name=f"{row.file_name}.xlsx",
+                                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        key = f"download_{row.file_uid}")
+
+                        with st.container():
+                            st.write(":green[Show invoice summary fields:]")
+                            show_col1, show_col2 = st.columns((1,2))
+                            show_col1.dataframe(summary_df)
+                            tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
+                            # st.write(tab_names)
+                            # if page_keys:
+                            with show_col2.container(height=375):
+                            # with show_col2.container():
+                                for ind, page_tab in enumerate(st.tabs(tab_names)):
+
+                                            
+                                            page_tab.image(images_to_show[row.file_uid][ind])
+                        # with st.expander(":green[Show invoice line items:]"):
+                            # show_col1, show_col2 = st.columns((1,2))
+                        with st.container(height=500):
+                        # with st.container():
+                            st.write(f"Sum total of line items = {line_items_df.iloc[0,-1]}")
+                            st.dataframe(line_items_df.iloc[:,1:-1],
+                                                            column_order=('Line item product IDs',
+                                                                        'Line item titles',
+                                                                        'Line item quantities',
+                                                                        'Line item unit prices',
+                                                                        'Line item total amounts'))
+                            
+                            # if page_keys:
+                            with st.container(height=375):
+                            # with st.container():
+                                tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
+                                for ind, page_tab in enumerate(st.tabs(tab_names)):
+
+                                        page_tab.image(invoice_images[ind])
+
+                    else:
+                        # SHOW PAGE IMAGES INSIDE PAGE TABS
+                        with st.expander(":green[Show invoice pages:]"):
+                            tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
+                            # try:
+                            for ind, page_tab in enumerate(st.tabs(tab_names)):
+                                page_tab.image(invoice_images[ind])
+
+
 
 # USER IN SIGNED-IN STATE
 if 'tokens' in st.session_state and 'access_token' in st.session_state['tokens'] and st.session_state['tokens']['access_token'] is not None:
@@ -78,60 +267,63 @@ if 'tokens' in st.session_state and 'access_token' in st.session_state['tokens']
     # st.write(list(st.session_state.keys()))
 
 
+
+
 # USER NEEDS TO SIGN IN
 else:
-    st.write(":green[Please sign in to your account here]")
+    # with st.expander(":green[Expand to sign in]"):
+        st.sidebar.write(":green[Please sign in to your account here]")
 
-    with st.form(key='sign_in_form'):
+        with st.sidebar.form(key='sign_in_form'):
 
-        st.session_state.user_email = st.text_input("email address")
-        st.session_state.password = st.text_input("password", 
-                                type='password')
+            st.session_state.user_email = st.text_input("email address")
+            st.session_state.password = st.text_input("password", 
+                                    type='password')
 
-        if st.form_submit_button(label=":green[sign-in]"):
+            if st.form_submit_button(label=":green[sign-in]"):
 
-            r = utils.get_dynamodb_table_record_from_(dynamodb_client,
-                                            CUSTOMERS_TABLE_NAME,
-                                            st.session_state.user_email
-                                        )
-            
-            if r:
+                r = utils.get_dynamodb_table_record_from_(dynamodb_client,
+                                                CUSTOMERS_TABLE_NAME,
+                                                st.session_state.user_email
+                                            )
+                
+                if r:
 
-                email_status=r[0]['email_status']['S']
-                st.session_state.customer_id = r[0]['user_id']['S']
-                if email_status =='CONFIRMED':
+                    email_status=r[0]['email_status']['S']
+                    st.session_state.customer_id = r[0]['user_id']['S']
+                    if email_status =='CONFIRMED':
 
-                    try:
+                        try:
 
-                        access_token, refresh_token, id_token = cognito_service.sign_in_user(st.session_state.user_email, 
-                                                                                                st.session_state.password)
-                        
-                        # store customer_id in session_state so that it won't be overwritten by other users
-                        st.session_state[access_token] = {'customer_id': st.session_state.customer_id,
-                                                          'user_email': st.session_state.user_email,}
-
-                        if access_token and refresh_token and id_token:
-                            st.session_state['tokens'] = {'access_token': access_token, 
-                                                            'refresh_token': refresh_token, 
-                                                            'id_token': id_token, 
-                                                            'last_refresh': time.time()}
+                            access_token, refresh_token, id_token = cognito_service.sign_in_user(st.session_state.user_email, 
+                                                                                                    st.session_state.password)
                             
-                            st.rerun()
-                        else:
-                            st.error("Login failed.")
-                    
-                    except:
-                            st.error("wrong password")
-                            st.rerun()
-                else:
+                            # store customer_id in session_state so that it won't be overwritten by other users
+                            st.session_state[access_token] = {'customer_id': st.session_state.customer_id,
+                                                            'user_email': st.session_state.user_email,}
+
+                            if access_token and refresh_token and id_token:
+                                st.session_state['tokens'] = {'access_token': access_token, 
+                                                                'refresh_token': refresh_token, 
+                                                                'id_token': id_token, 
+                                                                'last_refresh': time.time()}
+                                
+                                st.rerun()
+                            else:
+                                st.sidebar.error("Login failed.")
                         
-                        st.write("Please confirm your email address")
-                        st.session_state.sign_in_state = 'email_confirmation_required'
-            else:
-                st.error("Your password or email is incorrect")
-                st.rerun()
-                st.stop()
-                # st.rerun()   
+                        except:
+                                st.sidebar.error("wrong password")
+                                st.rerun()
+                    else:
+                            
+                            st.sidebar.write("Please confirm your email address")
+                            st.session_state.sign_in_state = 'email_confirmation_required'
+                else:
+                    st.sidebar.error("Your password or email is incorrect")
+                    st.rerun()
+                    st.stop()
+                    # st.rerun()   
 
 
 # USER NEEDS TO CONFIRM EMAIL
@@ -249,13 +441,13 @@ else:
 # USER FORGOT PASSWORD
 # st.write(st.session_state['tokens'])
 if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] and not st.session_state['tokens']['access_token']:
-    if st.button(":red[Forgot password?]"): 
+    if st.sidebar.button(":red[Forgot password?]"): 
         st.session_state.forgot_password = True
         st.rerun()
     if st.session_state.forgot_password:
-        with st.form('forgot_password_form'):
-            st.write("Enter your email address")
-            user_email = st.text_input("Email address")
+        with st.sidebar.form('forgot_password_form'):
+            st.sidebar.write("Enter your email address")
+            user_email = st.sidebar.text_input("Email address")
             
             if st.form_submit_button(":red[Submit]"):
                 try:
@@ -271,7 +463,7 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
 
         if st.session_state.reset_password:
             with st.form('reset_password_form'):
-                st.write("Enter the code you received in your email")
+                st.sidebar.write("Enter the code you received in your email")
                 verification_code = st.text_input("Verification code")
                 new_password = st.text_input("New password", type='password')
                 new_password_confirm = st.text_input("Confirm new password", type='password')
@@ -292,11 +484,13 @@ if st.session_state['tokens'] and 'access_token' in st.session_state['tokens'] a
                                     st.success("Your password has been reset")
                                     st.session_state.reset_password = False
                                     st.session_state.forgot_password = False
+                                    st.rerun()
                             except ClientError as e:
                                 st.error(f"Error: {e.response['Error']['Message']}")
                         else:
                             st.error("Your password is not valid. Please try again.")
                     else:
                         st.error("Your passwords do not match.")
+
 
 

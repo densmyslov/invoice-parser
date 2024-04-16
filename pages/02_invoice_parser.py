@@ -7,7 +7,6 @@ import uuid
 from datetime import datetime
 from io import BytesIO
 from random import randint
-from zipfile import ZipFile, ZIP_DEFLATED
 from time import sleep
 
 
@@ -118,27 +117,27 @@ with tab1:
     ts = datetime.now().strftime("%Y-%m-%d")
     metadata = {'tags':tags,
                 'customer_id': customer_id}
-    def create_zip(uploaded_files):
-        # In-memory buffer to store the zip file
-        zip_buffer = BytesIO()
+    # def create_zip(uploaded_files):
+    #     # In-memory buffer to store the zip file
+    #     zip_buffer = BytesIO()
         
-        # Create a zip file in the buffer
-        with ZipFile(zip_buffer, "a", ZIP_DEFLATED, False) as zip_file:
-            for file in uploaded_files:
-                # Read the content of the file
-                file_content = file.getvalue()
-                # Add file to the zip file
-                zip_file.writestr(file.name, file_content)
+    #     # Create a zip file in the buffer
+    #     with ZipFile(zip_buffer, "a", ZIP_DEFLATED, False) as zip_file:
+    #         for file in uploaded_files:
+    #             # Read the content of the file
+    #             file_content = file.getvalue()
+    #             # Add file to the zip file
+    #             zip_file.writestr(file.name, file_content)
 
-        # Go to the beginning of the buffer
-        zip_buffer.seek(0)
-        return zip_buffer
+    #     # Go to the beginning of the buffer
+    #     zip_buffer.seek(0)
+    #     return zip_buffer
     if uploaded_pdf_files:
         # Create zip file from uploaded files
         
 
         if st.button(":orange[Upload PDF invoices to your cloud account]"):
-            zip_buffer = create_zip(uploaded_pdf_files)
+            zip_buffer = utils.create_zip(uploaded_pdf_files)
 
             file_uid= uuid.uuid4().hex
 
@@ -178,10 +177,17 @@ with tab2:
             invoices_df0 = invoices_df0.query("search_str.str.contains(@q, case=False)")
         
 
-        default_cols = ['file_name','file_uid','num_pages','invoice_type','is_parsed',
+        default_cols = ['file_name','num_pages','invoice_type',
                     'total_sum_check','line_items_sum_check',
                     'time_to_complete']
+        if st.session_state['customer_id']=='b2bb522f-bef0-4291-96d7-c5d05c61374f':
+            default_cols = ['file_name','file_uid','num_pages','invoice_type','model',
+                    'total_sum_check','line_items_sum_check','is_parsed',
+                    'time_to_complete','tags']
         selection = utils.dataframe_with_selections(invoices_df0[default_cols])
+        # selection = utils.dataframe_with_selections(invoices_df0)
+
+        
 
     
     #===========================INVOICE PROCESSING====================================
@@ -225,20 +231,20 @@ with tab2:
 
                 # counter_up()
         #----------------------SHOW INVOICES
-        def to_excel(df1, df2):
-            output = BytesIO()
-            writer = pd.ExcelWriter(output, engine='xlsxwriter')
-            df1.to_excel(writer, index=False, sheet_name='Summary')
-            df2.to_excel(writer, index=False, sheet_name='Line Items')
-            workbook = writer.book
-            worksheet1 = writer.sheets['Summary']
-            worksheet2 = writer.sheets['Line Items']
-            # format1 = workbook.add_format({'num_format': '0.00'})
-            # worksheet1.set_column('A:A', None, format1)
-            # worksheet2.set_column('A:A', None, format1)
-            writer.close()
-            processed_data = output.getvalue()
-            return processed_data
+        # def to_excel(df1, df2):
+        #     output = BytesIO()
+        #     writer = pd.ExcelWriter(output, engine='xlsxwriter')
+        #     df1.to_excel(writer, index=False, sheet_name='Summary')
+        #     df2.to_excel(writer, index=False, sheet_name='Line Items')
+        #     workbook = writer.book
+        #     worksheet1 = writer.sheets['Summary']
+        #     worksheet2 = writer.sheets['Line Items']
+        #     # format1 = workbook.add_format({'num_format': '0.00'})
+        #     # worksheet1.set_column('A:A', None, format1)
+        #     # worksheet2.set_column('A:A', None, format1)
+        #     writer.close()
+        #     processed_data = output.getvalue()
+        #     return processed_data
 
 
         
@@ -282,7 +288,7 @@ with tab2:
 
                         line_items_df = pd.DataFrame(line_items)
 
-                        excel_data = to_excel(summary_df.reset_index(), 
+                        excel_data = utils.to_excel(summary_df.reset_index(), 
                                               line_items_df.reset_index())
 
                         st.download_button(
@@ -332,13 +338,13 @@ with tab2:
                             for ind, page_tab in enumerate(st.tabs(tab_names)):
                                 page_tab.image(invoice_images[ind])
 
-                    try:
-                        with st.expander("Show raw completion"):
+                    # try:
+                    #     with st.expander("Show raw completion"):
 
-                            # st.write(page_keys)
-                            st.write(gpt_response)
-                    except:
-                        pass
+                    #         # st.write(page_keys)
+                    #         st.write(gpt_response)
+                    # except:
+                    #     pass
         #----------------------PARSE INVOICES
 # triggers lambda 'invPar-step-function-trigger' which in turn triggers step machine 'invPar-step-function'
         if col1.button(":orange[Parse selected invoices]"):
