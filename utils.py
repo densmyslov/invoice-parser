@@ -107,6 +107,26 @@ def dataframe_with_selections(df: pd.DataFrame, init_value: bool = False) -> pd.
     selected_rows = edited_df[edited_df.Select]
     return selected_rows.drop('Select', axis=1)
 
+def delete_email_key_from_record(table_name, user_id, email):
+    """
+    Deletes email_key from customer table (email_key was created with update_client_record_with_email_key)
+    """
+    key = {
+        'user_id': {'S': user_id},
+        'email': {'S': email}
+    }
+
+    # Update expression to delete the field
+    update_expression = 'REMOVE email_key'
+
+    # Update the item in DynamoDB
+    response = dynamodb_client.update_item(
+        TableName=table_name,
+        Key=key,
+        UpdateExpression=update_expression
+    )
+    return response
+
 
 def delete_record(
                     dynamodb_client,
@@ -127,6 +147,30 @@ def delete_record(
     except Exception as e:
         print(f'Error deleting record: {e}')
         raise
+
+def delete_email_key_from_client_record(
+    table_name,
+    user_id,
+    email
+):
+    """
+    Deletes the email_key field from a customer record in DynamoDB.
+    """
+    key = {
+        'user_id': {'S': user_id},
+        'email': {'S': email}
+    }
+
+    # Update expression to remove the email_key field
+    update_expression = 'REMOVE email_key'
+
+    # Update the item in DynamoDB to remove the email_key
+    response = dynamodb_client.update_item(
+        TableName=table_name,
+        Key=key,
+        UpdateExpression=update_expression
+    )
+    return response
 
 
 
@@ -431,155 +475,6 @@ def is_valid_name(name):
     return bool(re.match(name_regex, name))
 
 
-
-
-@st.cache_data()
-def get_download_file_from_(df0, selected_market, sku_length, sku_prefix):
-
-
-    # generate skus:
-    df= df0.copy()
-    df["sku"] = df.apply(lambda x: get_sku_value(sku_length=sku_length, sku_prefix=sku_prefix), axis=1)
-
-    if selected_market == "Amazon.com":
-        col_name = 'amz_price'
-    elif selected_market == "Walmart.com":
-        col_name = 'wlm_price'
-
-
-    
-
-    if selected_market == "Amazon.com":
-
-        df["quantity"] = 0
-        df["product-id"] = df["asin"]
-        df["product-id-type"] = "ASIN"
-        df["condition-type"] = "New"
-
-    
-        amz_cols = ['sku','price','quantity','product-id', 'product-id-type', 'condition-type']
-        df_to_download = df[amz_cols].copy()
-
-
-        # Custom header
-        header = ["TemplateType=Offer\tVersion=2020.000",
-
-        "sku\tprice\tquantity\tproduct-id\tproduct-id-type\tcondition-type\t\
-        condition-note\tASIN-hint\ttitle\tproduct-tax-code\toperation-type\tsale-price\tsale-start-date\t\
-        sale-end-date\tleadtime-to-ship\tlaunch-date\tis-giftwrap-available\tis-gift-message-available\t\
-        fulfillment-center-id\tmain-offer-image\toffer-image1\toffer-image2\toffer-image3\toffer-image4\t\
-        offer-image5\tbatteries_required\tare_batteries_included\tbattery_cell_composition\tbattery_type\t\
-        number_of_batteries\tbattery_weight\tbattery_weight_unit_of_measure\tnumber_of_lithium_metal_cells\t\
-        number_of_lithium_ion_cells\tlithium_battery_packaging\tlithium_battery_energy_content\t\
-        lithium_battery_energy_content_unit_of_measure\tlithium_battery_weight\t\
-        lithium_battery_weight_unit_of_measure\tsupplier_declared_dg_hz_regulation1\t\
-        supplier_declared_dg_hz_regulation2\tsupplier_declared_dg_hz_regulation3\t\
-        supplier_declared_dg_hz_regulation4\tsupplier_declared_dg_hz_regulation5\t\
-        hazmat_united_nations_regulatory_id\tsafety_data_sheet_url\titem_weight\t\
-        item_weight_unit_of_measure\titem_volume\titem_volume_unit_of_measure\tflash_point\t\
-        ghs_classification_class1\tghs_classification_class2\tghs_classification_class3\t\
-        california_proposition_65_compliance_type\tcalifornia_proposition_65_chemical_names1\t\
-        california_proposition_65_chemical_names2\tcalifornia_proposition_65_chemical_names3\t\
-        california_proposition_65_chemical_names4\tcalifornia_proposition_65_chemical_names5",
-
-        "sku\tprice\tquantity\tproduct-id\tproduct-id-type\tcondition-type\t\
-        condition-note\tASIN-hint\ttitle\tproduct-tax-code\toperation-type\tsale-price\tsale-start-date\t\
-        sale-end-date\tleadtime-to-ship\tlaunch-date\tis-giftwrap-available\tis-gift-message-available\t\
-        fulfillment-center-id\tmain-offer-image\toffer-image1\toffer-image2\toffer-image3\toffer-image4\t\
-        offer-image5\tbatteries_required\tare_batteries_included\tbattery_cell_composition\tbattery_type\t\
-        number_of_batteries\tbattery_weight\tbattery_weight_unit_of_measure\tnumber_of_lithium_metal_cells\t\
-        number_of_lithium_ion_cells\tlithium_battery_packaging\tlithium_battery_energy_content\t\
-        lithium_battery_energy_content_unit_of_measure\tlithium_battery_weight\t\
-        lithium_battery_weight_unit_of_measure\tsupplier_declared_dg_hz_regulation1\t\
-        supplier_declared_dg_hz_regulation2\tsupplier_declared_dg_hz_regulation3\t\
-        supplier_declared_dg_hz_regulation4\tsupplier_declared_dg_hz_regulation5\t\
-        hazmat_united_nations_regulatory_id\tsafety_data_sheet_url\titem_weight\t\
-        item_weight_unit_of_measure\titem_volume\titem_volume_unit_of_measure\tflash_point\t\
-        ghs_classification_class1\tghs_classification_class2\tghs_classification_class3\t\
-        california_proposition_65_compliance_type\tcalifornia_proposition_65_chemical_names1\t\
-        california_proposition_65_chemical_names2\tcalifornia_proposition_65_chemical_names3\t\
-        california_proposition_65_chemical_names4\tcalifornia_proposition_65_chemical_names5"]
-
-
-        # Save the DataFrame as an Excel file in memory
-        output_buffer = BytesIO()
-        with pd.ExcelWriter(output_buffer, engine='xlsxwriter') as writer:
-            df_to_download.to_excel(writer, index=False, header=None, startrow=3)
-            # workbook = writer.book
-            worksheet = writer.sheets['Sheet1']
-            # Write the custom header
-            for row, header_row in enumerate(header):
-                for col, header_cell in enumerate(header_row.split('\t')):
-                    worksheet.write_string(row, col, header_cell)
-
-        # writer.save()
-
-        # Reset the buffer position to the beginning
-        output_buffer.seek(0)
-        return output_buffer
-
-    elif selected_market == 'Walmart.com':
-
-        wlm_quick_match_cols = ['sku',
-                'productIdType',
-                'productId',
-                'price',
-                'ShippingWeight']
-        df0=df.copy()
-        st.dataframe(df0)
-
-        df0['productIdType'] = 'UPC'
-        df0['productId'] = df['upc']
-
-        cols = ['amz_weight_lbs','wlm_weight_lbs']
-        col_dict = get_col_dict_from_(df, cols)
-
-
-        # get 'price' col, if amz_price is 0/NaN, use wlm_price
-        # fill 'price' col with default price if all prices are 0/NaN
-        col_name = 'wlm_weight_lbs'
-        other_col_name = [i for i in col_dict if col_name!=1][0]
-        idx0=col_dict[col_name]
-        idx1=col_dict[other_col_name]
-
-
-        df0['ShippingWeight']=df0.apply(lambda x: x[idx0] if x[idx0]>0 else x[idx1], axis=1)
-        default_weight = 0.22
-        df0.fillna(value={'ShippingWeight':default_weight}, inplace=True)
-        for col_name in ['price','ShippingWeight']:
-            df0[col_name] = df0[col_name].round(2)
-
-
-        bucket = 'hamazin-seller-accounts'
-        key = 'datasets/quick_match_upload-walmart.xlsx'
-        obj = s3_client_BRG.get_object(Bucket=bucket, Key=key)
-        # buffer = BytesIO(obj['Body'].read())
-        excel_buffer = BytesIO(obj['Body'].read())
-        sheet_name = 'MP Item Setup by Match'
-
-        # Read the Excel file with openpyxl
-        wb = load_workbook(excel_buffer)
-        ws = wb[sheet_name]
-        # Find the last row number in the worksheet
-        last_row = ws.max_row
-        st.write(last_row)
-        # df2 = df[wlm_quick_match_cols]
-
-        # Write the updated DataFrame back to the original sheet starting from row 7 and column 4
-        for index, r in enumerate(dataframe_to_rows(df0[wlm_quick_match_cols], index=False, header=False)):
-            if index < 6:  # Skip the first 6 rows
-                continue
-            row_number = index - 6 + 7
-            for col_number, value in enumerate(r, 4):  # Start writing from column 4
-                ws.cell(row=row_number, column=col_number, value=value)
-
-
-        # Save the workbook to a buffer
-        output_buffer = BytesIO()
-        wb.save(output_buffer)
-        output_buffer.seek(0)  # Reset the buffer position to the beginning
-
-        return output_buffer
     
 @st.cache_data()
 def load_invoice_df(_s3_client, customer_id, counter=None):
@@ -706,25 +601,44 @@ def pd_save_parquet(_s3_client, df, bucket, key, schema=None):
     df.to_parquet(buffer)
     _s3_client.put_object(Bucket=bucket, Key=key, Body=buffer.getvalue())
 
+def update_client_record_with_email_key(
+                                          table_name,
+                                          user_id,
+                                          email,
+                                          email_key
+                                          ):
+
+    """
+    Updates cutomer record in DynamoDB with email_key which is needed to login into Google email account
+    """
+    key = {
+        'user_id': {'S': user_id},
+        'email': {'S': email}
+    }
+
+    # Update expression to add new field
+    update_expression = 'SET email_key = :val'
+
+    # Value for the new field
+    expression_attribute_values = {
+        ':val': {'S': email_key}
+    }
+
+    # Update the item in DynamoDB
+    response = dynamodb_client.update_item(
+        TableName=table_name,
+        Key=key,
+        UpdateExpression=update_expression,
+        ExpressionAttributeValues=expression_attribute_values
+    )
+    return response
+
 def update_values_in_(df, starting_row, values):
     for i, row_values in enumerate(values):
         for j, value in enumerate(row_values):
             st.write(starting_row + i, j+1)
             df.iat[starting_row + i, j+1] = value
     return df
-
-def upload_df_to_s3_(s3_client,df,user_account_id,selected_market):
-    ts = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    bucket = 'hamazin-seller-accounts'
-    if selected_market == 'Amazon.com':
-        market_abbr = 'amz'
-    elif selected_market == 'Walmart.com':
-        market_abbr = 'wlm'
-    key = f"accounts/{user_account_id}/{market_abbr}_processing_summary/{ts}/{market_abbr}_ps.parquet"
-    st.write(key)
-    buffer = BytesIO()
-    df.to_parquet(buffer)
-    return s3_client.put_object(Bucket=bucket, Key=key, Body=buffer.getvalue())
 
 
 

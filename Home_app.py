@@ -152,7 +152,7 @@ with st.expander(":green[Test app without signing in]"):
                         #     if invoices_df.query("zip_file_uid == @file_uid").empty:
                         #         st.write("empty")
                             
-                        sleep(3)
+                        sleep(1)
                     # st.write(":orange[Your invoices have been uploaded to your cloud account]")  
                     # sleep(5) 
             # st.session_state.demo_session_id = None
@@ -245,11 +245,11 @@ with st.expander(":green[Test app without signing in]"):
 
                     else:
                         # SHOW PAGE IMAGES INSIDE PAGE TABS
-                        with st.expander(":green[Show invoice pages:]"):
-                            tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
-                            # try:
-                            for ind, page_tab in enumerate(st.tabs(tab_names)):
-                                page_tab.image(invoice_images[ind])
+                        # with st.expander(":green[Show invoice pages:]"):
+                        tab_names = [f"page {i+1}" for i in range(len(invoice_images))]
+                        # try:
+                        for ind, page_tab in enumerate(st.tabs(tab_names)):
+                            page_tab.image(invoice_images[ind])
 
 
 

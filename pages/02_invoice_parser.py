@@ -62,7 +62,7 @@ st.sidebar.write(customer_id)
 
 
 
-tab1, tab2 = st.tabs(["Upload invoices","View and Parse Invoices"])
+tab1, tab2, tab_invoices_from_email = st.tabs(["Upload invoices","View and Parse Invoices", "Invoices from Email"])
 
 #=================================UPLOAD INVOICES====================================================
 with tab1:
@@ -81,7 +81,8 @@ with tab1:
                         key = 'zip_tags')
     ts = datetime.now().strftime("%Y-%m-%d")
     metadata = {'tags':tags,
-                'customer_id': customer_id}
+                'customer_id': customer_id,
+                'source':'manual_upload'}
     if uploaded_zip_file:
     
         if st.button(":orange[Upload zipped invoices to your cloud account]"):
@@ -116,22 +117,9 @@ with tab1:
                     key = 'pdf_tags')
     ts = datetime.now().strftime("%Y-%m-%d")
     metadata = {'tags':tags,
-                'customer_id': customer_id}
-    # def create_zip(uploaded_files):
-    #     # In-memory buffer to store the zip file
-    #     zip_buffer = BytesIO()
-        
-    #     # Create a zip file in the buffer
-    #     with ZipFile(zip_buffer, "a", ZIP_DEFLATED, False) as zip_file:
-    #         for file in uploaded_files:
-    #             # Read the content of the file
-    #             file_content = file.getvalue()
-    #             # Add file to the zip file
-    #             zip_file.writestr(file.name, file_content)
+                'customer_id': customer_id,
+                'source':'manual_upload'}
 
-    #     # Go to the beginning of the buffer
-    #     zip_buffer.seek(0)
-    #     return zip_buffer
     if uploaded_pdf_files:
         # Create zip file from uploaded files
         
@@ -177,11 +165,12 @@ with tab2:
             invoices_df0 = invoices_df0.query("search_str.str.contains(@q, case=False)")
         
 
-        default_cols = ['file_name','num_pages','invoice_type',
-                    'total_sum_check','line_items_sum_check',
-                    'time_to_complete']
-        if st.session_state['customer_id']=='b2bb522f-bef0-4291-96d7-c5d05c61374f':
-            default_cols = ['file_name','file_uid','num_pages','invoice_type','model',
+        # default_cols = ['file_name','num_pages','invoice_type','source',
+        #             'total_sum_check','line_items_sum_check',
+        #             'time_to_complete']
+        if st.session_state['customer_id'] in ['b2bb522f-bef0-4291-96d7-c5d05c61374f',
+                                               'a67285fe-77eb-4d8f-a2d0-a5b0d2a25f95']:
+            default_cols = ['file_name','file_uid','num_pages','invoice_type','source','model',
                     'total_sum_check','line_items_sum_check','is_parsed',
                     'time_to_complete','tags']
         selection = utils.dataframe_with_selections(invoices_df0[default_cols])
@@ -393,6 +382,47 @@ with tab2:
 
 
 
+#=============================================INVOICES FROM EMAIL==============================================
+with tab_invoices_from_email:
+    # if 'email_key' not in st.session_state:
+    #     st.session_state['email_key'] = None
+
+
+    
+    if st.session_state.user_email:
+        with st.form("Enter your email key"):
+            email_key = st.text_input("Enter your email key here",
+                                      type='password',
+                                      key='update_email_key')
+
+            if st.form_submit_button("Submit"):
+                if email_key:
+                    r = utils.update_client_record_with_email_key(
+                                            utils.CUSTOMERS_TABLE_NAME,
+                                            customer_id,
+                                            st.session_state.user_email,
+                                            email_key
+                                            )
+                    if r['ResponseMetadata']['HTTPStatusCode']==200:
+                        st.success("Your email key successfully submitted")
+
+                    else:
+                        st.error("Smth went wrong. Please try again later")
+                else:
+                    st.error("You did not enter your email key")
+
+        if st.button("Delete your email key"):
+            r = utils.delete_email_key_from_client_record(
+                                                utils.CUSTOMERS_TABLE_NAME,
+                                                customer_id,
+                                                st.session_state.user_email
+                                            )
+            if r['ResponseMetadata']['HTTPStatusCode']==200:
+                st.success("Your email key has been deleted")
+
+            
+
+        
 
 
 

@@ -1,5 +1,7 @@
 streamlit
-pandas == 2.0.3
+pandas
+numpy
+pyarrow
 openpyxl == 3.1.2
 matplotlib == 3.7.2
 boto3 == 1.26.129
