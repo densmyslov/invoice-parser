@@ -118,7 +118,8 @@ with st.expander(":green[Test app without signing in]"):
                 key = f"accounts/{customer_id}/zip/{st.session_state.demo_session_id}/zipped_pdfs_v1.zip"
                 # st.write(key)
                 
-                metadata = {'customer_id': customer_id}
+                metadata = {'customer_id': customer_id,
+                            'source':'manual upload'}
                 s3_client.put_object(Bucket=BUCKET, 
                                             Key=key, 
                                             Body=zip_buffer.getvalue(),
