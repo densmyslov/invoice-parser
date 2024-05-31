@@ -82,7 +82,8 @@ with tab1:
     ts = datetime.now().strftime("%Y-%m-%d")
     metadata = {'tags':tags,
                 'customer_id': customer_id,
-                'source':'manual_upload'}
+                'source':'manual_upload',
+                }
     if uploaded_zip_file:
     
         if st.button(":orange[Upload zipped invoices to your cloud account]"):
