@@ -1,7 +1,7 @@
-streamlit
-pandas
-numpy
-pyarrow
+streamlit==1.34.0
+pandas==2.2.2
+numpy==1.26.0
+pyarrow==17.0.0
 openpyxl == 3.1.2
 matplotlib == 3.7.2
 boto3 == 1.26.129
@@ -9,8 +9,8 @@ xlsxwriter == 3.1.0
 python-dotenv == 1.0.0
 stripe == 5.4.0
 joblib == 1.3.2
-openai
-tiktoken
+openai==1.37.1
+tiktoken==0.7.0
 PyMuPDF==1.23.7
 pdfplumber==0.10.3
 PyPDF2==3.0.1
