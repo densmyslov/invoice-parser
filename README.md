@@ -8,3 +8,6 @@ The app  is built with:
 * frontend: Streamlit 
 * backend: AWS lambdas orchestrated by AWS State machine; s3 buckets for storage; AWS Cognito and AWS DynamoDB for user management
 * Parsing agent: LLMs
+
+<h2>Schematics of the AWS State machine:</h2>
+<img src="https://raw.githubusercontent.com/densmyslov/invoice-parser/main/assets/invpar_statemachine.png" alt="AWS State Machine Diagram" style="width:100%; max-width:600px;">
