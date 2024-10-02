@@ -605,6 +605,7 @@ def update_client_record_with_email_key(
                                           table_name,
                                           user_id,
                                           email,
+                                          service_email,
                                           email_key
                                           ):
 
@@ -616,12 +617,19 @@ def update_client_record_with_email_key(
         'email': {'S': email}
     }
 
-    # Update expression to add new field
-    update_expression = 'SET email_key = :val'
+    # # Update expression to add new field
+    # update_expression = 'SET email_key = :val'
+    # Update expression to add service_email and email_key
+    update_expression = 'SET service_email = :service_email_val, email_key = :email_key_val'
 
-    # Value for the new field
+    # # Value for the new field
+    # expression_attribute_values = {
+    #     ':val': {'S': email_key}
+    # }
+    # Values for the secondary email and email_key
     expression_attribute_values = {
-        ':val': {'S': email_key}
+        ':service_email_val': {'S': service_email},
+        ':email_key_val': {'S': email_key}
     }
 
     # Update the item in DynamoDB

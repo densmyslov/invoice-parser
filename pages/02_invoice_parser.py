@@ -8,12 +8,17 @@ from datetime import datetime
 from io import BytesIO
 from random import randint
 from time import sleep
+import Home_app as home
+import boto3
+from botocore.exceptions import ClientError
+import requests
+import urllib.parse
+from requests_aws4auth import AWS4Auth
 
-
-st.set_page_config(page_title='Invoice Processor', 
-                   page_icon=None, layout="wide", 
-                   initial_sidebar_state="auto", 
-                   menu_items=None)
+# st.set_page_config(page_title='Invoice Processor', 
+#                    page_icon=None, layout="wide", 
+#                    initial_sidebar_state="auto", 
+#                    menu_items=None)
 
 st.title(':orange[Invoice Processor]')
 
@@ -38,6 +43,8 @@ if 'upload_pdf_key' not in st.session_state:
     st.session_state['upload_pdf_key'] = randint(100001, 100000000)
 if 'summary_df' not in st.session_state:
     st.session_state['summary_df'] = pd.DataFrame()
+if 'api_key_last_4' not in st.session_state:
+    st.session_state['api_key_last_4'] = None
 
 def get_random_value():
     st.session_state['upload_pdf_key'] = randint(100001, 100000000)
@@ -62,7 +69,10 @@ st.sidebar.write(customer_id)
 
 
 
-tab1, tab2, tab_invoices_from_email = st.tabs(["Upload invoices","View and Parse Invoices", "Invoices from Email"])
+tab1, tab2, tab_invoices_from_email, tab_api_key = st.tabs(["Upload invoices",
+                                                            "View and Parse Invoices", 
+                                                            "Invoices from Email",
+                                                            "Get API Key"])
 
 #=================================UPLOAD INVOICES====================================================
 with tab1:
@@ -218,29 +228,6 @@ with tab2:
                 st.success("Invoices deleted")
                 sleep(2)
                 counter_up()
-
-                # counter_up()
-        #----------------------SHOW INVOICES
-        # def to_excel(df1, df2):
-        #     output = BytesIO()
-        #     writer = pd.ExcelWriter(output, engine='xlsxwriter')
-        #     df1.to_excel(writer, index=False, sheet_name='Summary')
-        #     df2.to_excel(writer, index=False, sheet_name='Line Items')
-        #     workbook = writer.book
-        #     worksheet1 = writer.sheets['Summary']
-        #     worksheet2 = writer.sheets['Line Items']
-        #     # format1 = workbook.add_format({'num_format': '0.00'})
-        #     # worksheet1.set_column('A:A', None, format1)
-        #     # worksheet2.set_column('A:A', None, format1)
-        #     writer.close()
-        #     processed_data = output.getvalue()
-        #     return processed_data
-
-
-        
-        # def get_df_to_show(invoices_df,
-        #                    selection):
-        #     df_to_show = invoices_df.loc[selection.index,:].copy()
             
 
 
@@ -277,6 +264,7 @@ with tab2:
 
 
                         line_items_df = pd.DataFrame(line_items)
+                        
 
                         excel_data = utils.to_excel(summary_df.reset_index(), 
                                               line_items_df.reset_index())
@@ -303,14 +291,16 @@ with tab2:
                         with st.expander(":green[Show invoice line items:]"):
                             # show_col1, show_col2 = st.columns((1,2))
                             with st.container(height=200):
-                            # with st.container():
-                                st.write(f"Sum total of line items = {line_items_df.iloc[0,-1]}")
-                                st.dataframe(line_items_df.iloc[:,1:-1],
-                                                                column_order=('Line item product IDs',
-                                                                            'Line item titles',
-                                                                            'Line item quantities',
-                                                                            'Line item unit prices',
-                                                                            'Line item total amounts'))
+                                if not line_items_df.empty:
+                                    st.write(f"Sum total of line items = {line_items_df.iloc[0,-1]}")
+                                    st.dataframe(line_items_df.iloc[:,1:-1],
+                                                                    column_order=('Line item product IDs',
+                                                                                'Line item titles',
+                                                                                'Line item quantities',
+                                                                                'Line item unit prices',
+                                                                                'Line item total amounts'))
+                                else:
+                                    st.write("No line items found")
                             
                             # if page_keys:
                             with st.container(height=375):
@@ -392,6 +382,9 @@ with tab_invoices_from_email:
     
     if st.session_state.user_email:
         with st.form("Enter your email key"):
+            service_email_address = st.text_input("Enter email address to retrieve invoices from",
+                                                  value=st.session_state.user_email,
+                                                    key = 'update_email_address')
             email_key = st.text_input("Enter your email key here",
                                       type='password',
                                       key='update_email_key')
@@ -402,6 +395,7 @@ with tab_invoices_from_email:
                                             utils.CUSTOMERS_TABLE_NAME,
                                             customer_id,
                                             st.session_state.user_email,
+                                            service_email_address,
                                             email_key
                                             )
                     if r['ResponseMetadata']['HTTPStatusCode']==200:
@@ -422,9 +416,109 @@ with tab_invoices_from_email:
                 st.success("Your email key has been deleted")
 
             
+#=============================================API_KEY==============================================
+with tab_api_key:
+    if st.session_state.user_email:
 
-        
+        with st.expander("Show last 4 symbols of your API key"):
+            if st.button("Show last 4 symbols of your API key"):
+                r = utils.get_dynamodb_table_record_from_(home.dynamodb_client,
+                                                    home.CUSTOMERS_TABLE_NAME,
+                                                    st.session_state.user_email
+                                                )
+                if 'api_key_last_4' in r[0]:
+                    st.session_state.api_key_last_4 = r[0]['api_key_last_4']['S']
+                
+                    col1, col2 = st.columns(2)
+                    col1.write("Last 4 symbols of your API key:")  
+                    col2.write(f"...{st.session_state['api_key_last_4']}")
+                else:
+                    st.error("You have not generated an API key yet")
 
+        with st.expander("Generate a new API key"):
+            if st.button("Generate a new API key"):
+                access_token = st.session_state['tokens']['access_token']
+                client_id = st.session_state[access_token]['customer_id']
+                username = st.session_state[st.session_state['tokens']['access_token']]['user_email']
+                password = st.session_state.password
+
+                session = boto3.Session(aws_access_key_id=home.AWS_ACCESS_KEY_ID, 
+                                        aws_secret_access_key=home.AWS_SECRET_KEY, 
+                                        region_name=home.REGION_NAME)
+                credentials = session.get_credentials().get_frozen_credentials()
+                service = "execute-api"
+                auth = AWS4Auth(credentials.access_key, 
+                                credentials.secret_key, 
+                                home.REGION_NAME, 
+                                service, 
+                                session_token=credentials.token)
+
+                # def calculate_secret_hash(username, client_id, client_secret):
+                #     import hmac
+                #     import hashlib
+                #     import base64
+                #     message = username + client_id
+                #     dig = hmac.new(client_secret.encode('utf-8'), msg=message.encode('utf-8'), digestmod=hashlib.sha256).digest()
+                #     return base64.b64encode(dig).decode()
+
+                # def authenticate_user_and_get_jwt(username, password):
+                #     try:
+                #         # Calculate secret hash if the App Client has a secret
+                #         secret_hash = calculate_secret_hash(username, 
+                #                                             home.AWS_COGNITO_CLIENT_ID, 
+                #                                             home.AWS_COGNITO_CLIENT_SECRET)
+
+                #         # Authenticate user with username and password
+                #         auth_response = home.cognito_idp_client.initiate_auth(
+                #             AuthFlow='USER_PASSWORD_AUTH',
+                #             AuthParameters={
+                #                 'USERNAME': username,
+                #                 'PASSWORD': password,
+                #                 'SECRET_HASH': secret_hash  # Include the secret hash if necessary
+                #             },
+                #             ClientId=home.AWS_COGNITO_CLIENT_ID
+                #         )
+
+                #         # Extract the ID token (JWT)
+                #         jwt_token = auth_response['AuthenticationResult']['IdToken']
+                #         return jwt_token
+
+                #     except ClientError as e:
+                #         print(f"Error during authentication: {e}")
+                #         return None
+
+
+
+                # jwt_token = authenticate_user_and_get_jwt(username, password)
+                # jwt_token = jwt_token.strip("'").strip()
+                # encoded_jwt = urllib.parse.quote(jwt_token)
+                # st.write(f"JWT Token: {jwt_token}")
+
+                api_url = 'https://s3k5o51zxk.execute-api.us-east-1.amazonaws.com/default'
+                params = {'email': st.session_state.user_email}
+                response = requests.get(api_url, auth=auth, params=params)
+                # headers = {
+                #     "Authorization": f"Bearer {encoded_jwt}"  # Ensure correct formatting
+                # }
+                # st.write("Headers:", headers)
+
+                # payload = {
+                #     'email': st.session_state.user_email
+                # }
+
+                # # Trigger the Lambda function via API Gateway using POST
+                # response = requests.post(api_url, headers=headers, json=json.dumps(payload))
+
+
+                # Handle the response
+                if response.status_code == 200:
+                    st.write("Please save your API key, you won't be able to see it again:")
+                    st.write("Response:", response.json())
+                else:
+                    st.write(f"Failed to generate API key. Status Code: {response.status_code}")
+                    st.write("Error:", response.text)
+
+                
 
 
             

@@ -129,7 +129,7 @@ with st.expander(":green[Test app without signing in]"):
                 zip_buffer.seek(0)
                 st.session_state.upload_pdf_key = randint(100000, 100000000)
             # if st.session_state.demo_session_id:
-                with st.spinner('Wait while our model processes your invoice'):
+                with st.spinner('Wait while we process your invoice'):
                     # first_uid = json_for_parsing_invoices[0]['file_uid']
                     for ind in range(30):
                         # st.write(ind)
@@ -290,6 +290,11 @@ else:
 
                     email_status=r[0]['email_status']['S']
                     st.session_state.customer_id = r[0]['user_id']['S']
+
+
+                    if 'api_key_last_4' in r[0]:
+                        st.session_state.api_key_last_4 = r[0]['api_key_last_4']['S']
+
                     if email_status =='CONFIRMED':
 
                         try:
