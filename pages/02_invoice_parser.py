@@ -198,7 +198,7 @@ with tab2:
         # if col0.button("Clear selection"):
         #     selection['Select'] = False
         #     st.rerun()
-        #----------------------DELETE INVOICES
+#=============================================DELETE==============================================
         if col3.button(":red[Delete selected invoices]"):
             if selection.empty:
                 st.error("You have not selected any invoices")
@@ -230,7 +230,7 @@ with tab2:
                 counter_up()
             
 
-
+#=============================================SHOW and DOWNLOAD==============================================
 
         if col2.button("Show selected invoices"):
             if selection.empty:
@@ -265,17 +265,31 @@ with tab2:
 
                         line_items_df = pd.DataFrame(line_items)
                         
-
+#=============================================DOWNLOAD==============================================
                         excel_data = utils.to_excel(summary_df.reset_index(), 
                                               line_items_df.reset_index())
-
-                        st.download_button(
+                        col1, col2, col3 = st.columns(3)
+                        col1.download_button(
                                             label=":blue[Download as Excel]",
                                             data=excel_data,
                                             file_name=f"{row.file_name}.xlsx",
                                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                         key = f"download_{row.file_uid}")
+# make a function to download pdf file from s3 persistent in the cache
+                        @st.cache_data()
+                        def get_pdf_file(customer_id, file_uid):
+                            key = f"accounts/{customer_id}/pdfs/{row.file_uid}/original_invoice.pdf"
+                            obj = s3_client.get_object(Bucket=BUCKET, Key=key)
+                            return  obj['Body'].read()
+                        pdf_data = get_pdf_file(customer_id, row.file_uid)
+                        col3.download_button(
+                                            label=":blue[Download as PDF]",
+                                            data=pdf_data,
+                                            file_name=f"{row.file_name}.pdf",
+                                            mime="application/pdf",
+                                        key = f"download_{row.file_uid}_pdf")
 
+#=============================================SHOW==============================================
                         with st.expander(":green[Show invoice summary fields:]"):
                             show_col1, show_col2 = st.columns((1,2))
                             show_col1.dataframe(summary_df)
